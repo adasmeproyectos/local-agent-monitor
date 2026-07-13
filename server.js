@@ -1,5 +1,9 @@
 'use strict';
 
+if (!global.DOMMatrix) {
+  global.DOMMatrix = class DOMMatrix {};
+}
+
 const express  = require('express');
 const path     = require('path');
 const os       = require('os');
