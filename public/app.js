@@ -344,6 +344,8 @@ async function loadStats() {
       const cardCountEl = document.getElementById(`count${r.cluster}`);
       if (cardCountEl) cardCountEl.textContent = r.count;
     });
+
+    renderStorageRingChart(res.clusterCounts || []);
   } catch { /* ignore */ }
 }
 
@@ -903,6 +905,8 @@ if (btnRefreshProcesses) btnRefreshProcesses.addEventListener('click', () => loa
    ════════════════════════════════════════════════════════════════════════════════ */
 function openPreview(encPath, name, cluster, subTag) {
   activeFilePath = decodeURIComponent(encPath);
+  const cacheBuster = Date.now();
+  const streamUrl = `/api/view-file?path=${encodeURIComponent(activeFilePath)}&t=${cacheBuster}`;
 
   document.getElementById('previewFilename').textContent = name;
   document.getElementById('previewMetaLine').textContent = `${cluster} · ${subTag}`;
@@ -910,12 +914,29 @@ function openPreview(encPath, name, cluster, subTag) {
   document.getElementById('previewImageWrap').style.display = 'none';
   document.getElementById('previewFallback').style.display  = 'none';
 
-  const ext      = activeFilePath.slice(activeFilePath.lastIndexOf('.')).toLowerCase();
-  const streamUrl = `/api/view-file?path=${encodeURIComponent(activeFilePath)}`;
+  const ext = activeFilePath.slice(activeFilePath.lastIndexOf('.')).toLowerCase();
 
   if (ext === '.pdf') {
-    document.getElementById('previewPdfObject').data = streamUrl;
-    document.getElementById('previewPdfFrame').src   = streamUrl;
+    const oldObject = document.getElementById('previewPdfObject');
+    const parent = oldObject.parentNode;
+
+    const newObject = document.createElement('object');
+    newObject.id = 'previewPdfObject';
+    newObject.type = 'application/pdf';
+    newObject.className = 'preview-pdf-frame';
+    newObject.setAttribute('aria-label', 'Vista Previa PDF');
+    newObject.data = streamUrl;
+
+    const newIframe = document.createElement('iframe');
+    newIframe.id = 'previewPdfFrame';
+    newIframe.title = 'Vista Previa PDF';
+    newIframe.className = 'preview-pdf-frame';
+    newIframe.setAttribute('allowfullscreen', '');
+    newIframe.src = streamUrl;
+
+    newObject.appendChild(newIframe);
+    parent.replaceChild(newObject, oldObject);
+
     document.getElementById('previewPdfWrap').style.display = 'flex';
   } else if (['.jpg','.jpeg','.png','.gif','.webp','.bmp','.svg'].includes(ext)) {
     document.getElementById('previewImage').src = streamUrl;
@@ -929,6 +950,11 @@ function openPreview(encPath, name, cluster, subTag) {
 
 document.getElementById('previewCloseBtn').addEventListener('click', () => {
   document.getElementById('previewOverlay').setAttribute('aria-hidden','true');
+});
+document.getElementById('previewOverlay').addEventListener('click', (event) => {
+  if (event.target === event.currentTarget) {
+    document.getElementById('previewOverlay').setAttribute('aria-hidden', 'true');
+  }
 });
 document.getElementById('previewBtnExplorer').addEventListener('click', () => { if (activeFilePath) showInExplorer(activeFilePath); });
 document.getElementById('previewBtnPurge').addEventListener('click', () => {
@@ -1165,5 +1191,80 @@ document.getElementById('rescanNextBtn')?.addEventListener('click', async () => 
   }
 });
 
+/* ─── Storage Ring Chart ──────────────────────────────────────────────────────── */
+const CHART_PALETTE = [
+  '#0071e3', '#34c759', '#ff9f0a', '#ff3b30',
+  '#af52de', '#5ac8fa', '#ff6b6b', '#86868b'
+];
+
+function renderStorageRingChart(clusterCounts) {
+  const svg = document.getElementById('storageRingSvg');
+  const legend = document.getElementById('chartLegend');
+  if (!svg || !legend) return;
+
+  const total = clusterCounts.reduce((acc, c) => acc + (c.count || 0), 0);
+
+  if (total === 0) {
+    svg.innerHTML = '<circle cx="100" cy="100" r="70" fill="none" stroke="#e5e5ea" stroke-width="28"/>';
+    legend.innerHTML = '';
+    return;
+  }
+
+  const R = 70;
+  const CX = 100;
+  const CY = 100;
+  const CIRC = 2 * Math.PI * R;
+
+  const sorted = [...clusterCounts].sort((a, b) => (b.count || 0) - (a.count || 0));
+
+  let offset = 0;
+  let svgHTML = '';
+  let legendHTML = '';
+
+  sorted.forEach((item, i) => {
+    const fraction = (item.count || 0) / total;
+    const dashLength = fraction * CIRC;
+    const gap = CIRC - dashLength;
+    const color = CHART_PALETTE[i % CHART_PALETTE.length];
+
+    svgHTML += `
+      <circle
+        cx="${CX}" cy="${CY}" r="${R}"
+        fill="none"
+        stroke="${color}"
+        stroke-width="28"
+        stroke-dasharray="${dashLength.toFixed(2)} ${gap.toFixed(2)}"
+        stroke-dashoffset="${(-offset).toFixed(2)}"
+        transform="rotate(-90 ${CX} ${CY})"
+        style="transition: stroke-dasharray 0.6s ease"
+      />`;
+
+    legendHTML += `
+      <li>
+        <span class="legend-dot" style="background:${color}"></span>
+        <span>${escapeHtml(item.cluster || 'Otros')}</span>
+        <span class="legend-count">${(item.count || 0).toLocaleString()}</span>
+      </li>`;
+
+    offset += dashLength;
+  });
+
+  svgHTML += `
+    <text x="${CX}" y="${CY - 8}" text-anchor="middle" font-size="22" font-weight="700" fill="#1d1d1f">
+      ${total.toLocaleString()}
+    </text>
+    <text x="${CX}" y="${CY + 14}" text-anchor="middle" font-size="11" fill="#86868b">
+      archivos
+    </text>`;
+
+  svg.innerHTML = svgHTML;
+  legend.innerHTML = legendHTML;
+  const chartTotalLabel = document.getElementById('chartTotalLabel');
+  if (chartTotalLabel) {
+    chartTotalLabel.textContent = `${total.toLocaleString()} archivos indexados`;
+  }
+}
+
 /* ─── Arranque ───────────────────────────────────────────────────────────────── */
 window.addEventListener('DOMContentLoaded', () => switchTab('Home'));
+

@@ -1109,11 +1109,26 @@ body {
 }
 
 .preview-close-btn {
-  background: transparent;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.06);
   border: none;
   color: var(--text-secondary);
   cursor: pointer;
-  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.18s ease, color 0.18s ease;
+  flex-shrink: 0;
+}
+.preview-close-btn:hover {
+  background: rgba(220, 38, 38, 0.12);
+  color: #dc2626;
+}
+.preview-close-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 .preview-content {
@@ -1311,3 +1326,24 @@ body {
   opacity: 0.82 !important;
   transition: all 0.2s ease !important;
 }
+
+/* ─── Storage Ring Chart ──────────────────────────────────────────────────── */
+.storage-chart-card {
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: 24px 28px;
+  margin-bottom: 20px;
+}
+.chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.chart-title  { font-size: 1rem; font-weight: 600; }
+.chart-meta   { font-size: 0.78rem; color: var(--text-secondary); }
+.chart-body   { display: flex; align-items: center; gap: 32px; }
+.storageRingSvg { flex-shrink: 0; }
+.chart-legend { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.chart-legend li {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 0.83rem; color: var(--text-primary);
+}
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.legend-count { margin-left: auto; font-weight: 600; color: var(--text-secondary); font-size: 0.78rem; }

@@ -442,14 +442,17 @@ function ensureDesktopShortcut() {
     if (fs.existsSync(shortcutPath)) return;
 
     const targetPath = process.execPath;
+    const launcherVbsPath = path.join(path.dirname(targetPath), 'launcher.vbs');
     const vbsScriptPath = path.join(os.tmpdir(), 'create_navi_shortcut.vbs');
     const vbsContent = [
       'Set oWS = WScript.CreateObject("WScript.Shell")',
       `sLinkFile = "${shortcutPath}"`,
       'Set oLink = oWS.CreateShortcut(sLinkFile)',
-      `oLink.TargetPath = "${targetPath}"`,
+      'oLink.TargetPath = "wscript.exe"',
+      `oLink.Arguments = """${launcherVbsPath}"""`,
       `oLink.WorkingDirectory = "${path.dirname(targetPath)}"`,
       'oLink.Description = "Navi Cleaner Suite de Optimización"',
+      `oLink.IconLocation = "${targetPath}, 0"`,
       'oLink.Save'
     ].join('\r\n');
     fs.writeFileSync(vbsScriptPath, vbsContent, 'utf8');
