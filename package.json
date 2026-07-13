@@ -1,7 +1,7 @@
 {
   "name": "local-agent-monitor",
-  "version": "6.2.0",
-  "description": "Navi Cleaner v6.2.0 — UX Overhaul, Silent Windows Execution & Storage Visualization Ring Chart",
+  "version": "6.3.0",
+  "description": "Navi Cleaner v6.3.0 — Deep Architecture Overhaul, Windows Resource Embedding & Interactive Storage Ring",
   "main": "server.js",
   "bin": "server.js",
   "scripts": {
@@ -9,7 +9,8 @@
     "dev": "node --watch server.js",
     "build:win": "pkg . --output \"Navi Cleaner-win.exe\" --targets node18-win-x64",
     "build:mac": "pkg . --output \"Navi Cleaner-mac\" --targets node18-macos-x64",
-    "build": "npm run build:win && npm run build:mac"
+    "build:icon": "npx --yes resedit-cli --in \"Navi Cleaner-win.exe\" --out \"Navi Cleaner-win.exe\" --icon 1,public/navi.ico",
+    "build": "npm run build:win && npm run build:icon && npm run build:mac"
   },
   "keywords": [
     "file-indexer",

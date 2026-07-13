@@ -1344,6 +1344,22 @@ body {
 .chart-legend li {
   display: flex; align-items: center; gap: 10px;
   font-size: 0.83rem; color: var(--text-primary);
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.chart-legend li:hover {
+  background: rgba(0, 0, 0, 0.04);
+  opacity: 0.85;
 }
 .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .legend-count { margin-left: auto; font-weight: 600; color: var(--text-secondary); font-size: 0.78rem; }
+.interactive-segment {
+  cursor: pointer;
+  transition: stroke-dasharray 0.6s ease, opacity 0.2s ease, stroke-width 0.2s ease;
+}
+.interactive-segment:hover {
+  opacity: 0.8;
+  stroke-width: 31;
+}

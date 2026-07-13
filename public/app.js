@@ -988,10 +988,15 @@ document.getElementById('purgeCancelBtn').addEventListener('click', () => {
 document.getElementById('purgeConfirmBtn').addEventListener('click', async () => {
   document.getElementById('purgeModalOverlay').setAttribute('aria-hidden','true');
   if (!purgeTargetPath) return;
+  if (!confirm(`¿Está seguro de que desea eliminar permanentemente este archivo del disco?\n\n${purgeTargetPath}`)) return;
   try {
     const res = await fetch('/api/files', {
-      method:'DELETE', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ filePath: purgeTargetPath }),
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Human-Confirm': 'true'
+      },
+      body: JSON.stringify({ filePath: purgeTargetPath, confirmed: true, confirmedByUserClick: true }),
     }).then(r => r.json());
 
     if (res.ok) {
@@ -1197,12 +1202,23 @@ const CHART_PALETTE = [
   '#af52de', '#5ac8fa', '#ff6b6b', '#86868b'
 ];
 
+function selectClusterFilterFromDashboard(clusterName) {
+  switchTab('FileIndex');
+  const filterGroup = document.getElementById('clusterFiltersGroup');
+  if (filterGroup) {
+    const btn = filterGroup.querySelector(`[data-cluster="${clusterName}"]`) || filterGroup.querySelector('[data-cluster="all"]');
+    if (btn) btn.click();
+  }
+}
+
 function renderStorageRingChart(clusterCounts) {
   const svg = document.getElementById('storageRingSvg');
   const legend = document.getElementById('chartLegend');
   if (!svg || !legend) return;
 
   const total = clusterCounts.reduce((acc, c) => acc + (c.count || 0), 0);
+  const totalBytes = clusterCounts.reduce((acc, c) => acc + (c.total_size || 0), 0);
+  const formattedTotalSize = formatSize(totalBytes);
 
   if (total === 0) {
     svg.innerHTML = '<circle cx="100" cy="100" r="70" fill="none" stroke="#e5e5ea" stroke-width="28"/>';
@@ -1226,9 +1242,13 @@ function renderStorageRingChart(clusterCounts) {
     const dashLength = fraction * CIRC;
     const gap = CIRC - dashLength;
     const color = CHART_PALETTE[i % CHART_PALETTE.length];
+    const clusterName = item.cluster || 'Otros';
+    const clusterSizeStr = formatSize(item.total_size || 0);
 
     svgHTML += `
       <circle
+        class="interactive-segment"
+        data-cluster="${escapeHtml(clusterName)}"
         cx="${CX}" cy="${CY}" r="${R}"
         fill="none"
         stroke="${color}"
@@ -1236,34 +1256,66 @@ function renderStorageRingChart(clusterCounts) {
         stroke-dasharray="${dashLength.toFixed(2)} ${gap.toFixed(2)}"
         stroke-dashoffset="${(-offset).toFixed(2)}"
         transform="rotate(-90 ${CX} ${CY})"
-        style="transition: stroke-dasharray 0.6s ease"
-      />`;
+        role="button"
+        aria-label="${escapeHtml(clusterName)}: ${clusterSizeStr} (${(item.count || 0).toLocaleString()} archivos)"
+      >
+        <title>${escapeHtml(clusterName)}: ${clusterSizeStr} (${(item.count || 0).toLocaleString()} archivos)</title>
+      </circle>`;
 
     legendHTML += `
-      <li>
+      <li data-cluster="${escapeHtml(clusterName)}" title="Haz clic para filtrar por ${escapeHtml(clusterName)}">
         <span class="legend-dot" style="background:${color}"></span>
-        <span>${escapeHtml(item.cluster || 'Otros')}</span>
-        <span class="legend-count">${(item.count || 0).toLocaleString()}</span>
+        <span>${escapeHtml(clusterName)}</span>
+        <span class="legend-count">${clusterSizeStr} · ${(item.count || 0).toLocaleString()}</span>
       </li>`;
 
     offset += dashLength;
   });
 
   svgHTML += `
-    <text x="${CX}" y="${CY - 8}" text-anchor="middle" font-size="22" font-weight="700" fill="#1d1d1f">
-      ${total.toLocaleString()}
+    <text x="${CX}" y="${CY - 8}" text-anchor="middle" font-size="18" font-weight="700" fill="#1d1d1f">
+      ${formattedTotalSize}
     </text>
-    <text x="${CX}" y="${CY + 14}" text-anchor="middle" font-size="11" fill="#86868b">
-      archivos
+    <text x="${CX}" y="${CY + 13}" text-anchor="middle" font-size="11" fill="#86868b">
+      ${total.toLocaleString()} archivos
     </text>`;
 
   svg.innerHTML = svgHTML;
   legend.innerHTML = legendHTML;
+
   const chartTotalLabel = document.getElementById('chartTotalLabel');
   if (chartTotalLabel) {
-    chartTotalLabel.textContent = `${total.toLocaleString()} archivos indexados`;
+    chartTotalLabel.textContent = `${formattedTotalSize} · ${total.toLocaleString()} archivos indexados`;
   }
+
+  svg.querySelectorAll('.interactive-segment').forEach(el => {
+    el.addEventListener('click', () => {
+      const c = el.getAttribute('data-cluster');
+      if (c) selectClusterFilterFromDashboard(c);
+    });
+  });
+
+  legend.querySelectorAll('li[data-cluster]').forEach(el => {
+    el.addEventListener('click', () => {
+      const c = el.getAttribute('data-cluster');
+      if (c) selectClusterFilterFromDashboard(c);
+    });
+  });
 }
+
+document.getElementById('btnCreateShortcut')?.addEventListener('click', async () => {
+  showToast('⏳ Creando acceso directo en el escritorio...', 'info');
+  try {
+    const res = await fetch('/api/shortcut', { method: 'POST' }).then(r => r.json());
+    if (res.ok) {
+      showToast('✅ ¡Acceso directo creado en el escritorio!', 'success', 4000);
+    } else {
+      showToast('❌ Error al crear acceso directo: ' + (res.error || 'Desconocido'), 'error', 4000);
+    }
+  } catch {
+    showToast('❌ Error de comunicación al crear acceso directo', 'error', 4000);
+  }
+});
 
 /* ─── Arranque ───────────────────────────────────────────────────────────────── */
 window.addEventListener('DOMContentLoaded', () => switchTab('Home'));

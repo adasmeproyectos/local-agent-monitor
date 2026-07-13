@@ -312,7 +312,8 @@ app.post('/api/files/explorer', (req, res) => {
 
 // ─── Purge File ───────────────────────────────────────────────────────────────
 app.delete('/api/files', async (req, res) => {
-  if (!req.body || !req.body.confirmedByUserClick) {
+  const isConfirmed = (req.body && (req.body.confirmedByUserClick || req.body.confirmed)) || (req.headers['x-human-confirm'] === 'true');
+  if (!isConfirmed) {
     return res.status(403).json({ ok: false, error: 'FAIL-SAFE SAFETY RESTRICTION: File deletion requires explicit human confirmation click.' });
   }
   const { filePath } = req.body;
@@ -416,17 +417,30 @@ app.get('/api/shutdown', (req, res) => {
 // ─── Graceful Shutdown ────────────────────────────────────────────────────────
 let _server = null;
 
+function killProcessTreeAndExit() {
+  if (process.platform === 'win32') {
+    try {
+      exec(`taskkill /F /T /PID ${process.pid}`, () => process.exit(0));
+    } catch {
+      process.exit(0);
+    }
+    setTimeout(() => process.exit(0), 1000);
+  } else {
+    process.exit(0);
+  }
+}
+
 function gracefulShutdown(reason = 'unknown') {
   console.log(`\n[Shutdown] ${reason}`);
   closeDb();
   if (_server) {
     _server.close(() => {
       console.log('[Shutdown] Server closed. All resources freed. ✅');
-      process.exit(0);
+      killProcessTreeAndExit();
     });
-    setTimeout(() => process.exit(0), 3000);
+    setTimeout(() => killProcessTreeAndExit(), 1500);
   } else {
-    process.exit(0);
+    killProcessTreeAndExit();
   }
 }
 
@@ -465,6 +479,15 @@ function ensureDesktopShortcut() {
   }
 }
 
+app.post('/api/shortcut', (req, res) => {
+  try {
+    ensureDesktopShortcut();
+    res.json({ ok: true, message: 'Acceso directo creado en el escritorio' });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // ─── Chromium App Wrapper (Native Window Mode) ────────────────────────────────
 function launchNativeAppWindow(url) {
   if (process.platform === 'win32') {
@@ -502,7 +525,6 @@ _server = app.listen(PORT, '127.0.0.1', async () => {
   console.log(`║   Database→ ${DB_PATH}  ║`);
   console.log('╚══════════════════════════════════════════════════╝');
   console.log('');
-  ensureDesktopShortcut();
   if (!process.argv.includes('--no-window') && !process.env.NO_WINDOW) {
     try {
       launchNativeAppWindow(url);
