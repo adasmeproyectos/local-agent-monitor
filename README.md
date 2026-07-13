@@ -6,7 +6,7 @@ Navi Cleaner es una aplicación de escritorio premium, diseñada bajo la estéti
 
 Para usar la aplicación, no necesitas instalar herramientas de programación ni ejecutar comandos. Solo haz clic en el siguiente enlace:
 
-👉 **[DESCARGAR NAVI CLEANER PARA WINDOWS](https://github.com/adasmeproyectos/local-agent-monitor/releases/download/v5.5/Navi_Cleaner.exe)**
+👉 **[DESCARGAR NAVI CLEANER PARA WINDOWS](https://github.com/adasmeproyectos/local-agent-monitor/releases/tag/v5.5)**
 
 ---
 
