@@ -391,14 +391,13 @@ function streamFileHandler(req, res) {
 app.get('/api/view-file',    streamFileHandler);
 app.get('/api/files/stream', streamFileHandler);
 
-// ─── Academic File Organizer (transaction-safe rename pipeline) ──────────────────
+// ─── Semantic File Organizer (transaction-safe rename pipeline) ──────────────────
 app.post('/api/files/organize', async (req, res) => {
   try {
     const { destRoot } = req.body;
     if (!destRoot) return res.status(400).json({ ok: false, error: 'destRoot required' });
 
-    // Retrieve all indexed files for pipeline input
-    const { getFiles } = require('./modules/db');
+    // Retrieve all indexed files for pipeline input (getFiles already imported at top)
     const files = getFiles({ cluster: 'Universidad', sub_tag: 'all', limit: 1000, offset: 0 });
 
     const result = await organizeAcademicFiles(destRoot, files);

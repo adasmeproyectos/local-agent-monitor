@@ -77,12 +77,12 @@ async function processBatch(filePaths, options = {}) {
 
     const { textSample, info, size, mtime } = await extractMetadata(filePath, ext);
 
-    const richSample = [
-      info?.title, info?.subject, info?.keywords, info?.author,
-      name, textSample
-    ].filter(Boolean).join(' ');
+    // Build rich sample; release references immediately after use
+    const parts = [info?.title, info?.subject, info?.keywords, info?.author, name, textSample];
+    const richSample = parts.filter(Boolean).join(' ');
 
     const { cluster, subTag, confidence, matchedKeywords } = classify(name, ext, richSample);
+    const keywordsStr = matchedKeywords.join(', ');
 
     upsertFile({
       path:       filePath,
@@ -93,7 +93,7 @@ async function processBatch(filePaths, options = {}) {
       cluster,
       sub_tag:    subTag || null,
       confidence,
-      keywords:   matchedKeywords.join(', '),
+      keywords:   keywordsStr,
       indexed_at: new Date().toISOString(),
     });
 

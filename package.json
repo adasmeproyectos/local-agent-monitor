@@ -1,7 +1,7 @@
 {
   "name": "local-agent-monitor",
-  "version": "6.0.7",
-  "description": "Navi Cleaner v6.0.7 — Live MCP verified crawler, fixed rescan overlay & auto-elevation manifest",
+  "version": "6.1.0",
+  "description": "Navi Cleaner v6.1.0 — Full preview layout scaling overhaul & performance optimization",
   "main": "server.js",
   "bin": "server.js",
   "scripts": {

@@ -916,10 +916,10 @@ function openPreview(encPath, name, cluster, subTag) {
   if (ext === '.pdf') {
     document.getElementById('previewPdfObject').data = streamUrl;
     document.getElementById('previewPdfFrame').src   = streamUrl;
-    document.getElementById('previewPdfWrap').style.display = 'block';
-  } else if (['.jpg','.jpeg','.png','.gif','.webp'].includes(ext)) {
+    document.getElementById('previewPdfWrap').style.display = 'flex';
+  } else if (['.jpg','.jpeg','.png','.gif','.webp','.bmp','.svg'].includes(ext)) {
     document.getElementById('previewImage').src = streamUrl;
-    document.getElementById('previewImageWrap').style.display = 'block';
+    document.getElementById('previewImageWrap').style.display = 'flex';
   } else {
     document.getElementById('previewFallback').style.display = 'flex';
   }
