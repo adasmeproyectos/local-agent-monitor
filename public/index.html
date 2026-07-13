@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Navi Cleaner — Suite Apple · Inteligencia de Escritorio</title>
+  <meta name="description" content="Indexador inteligente de archivos locales, escáner de juegos del Registro de Windows, limpiador de cachés de lanzadores y monitor de seguridad de procesos." />
+  <link rel="icon" type="image/png" href="/navi.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════ APPLE LIGHT BACKGROUND -->
+<div class="bg-gradient-layer" aria-hidden="true"></div>
+
+<!-- ═══════════════════════════ HEADER -->
+<header class="app-header">
+  <div class="header-inner">
+
+    <!-- Logo group with mini HUD navi.gif -->
+    <div class="logo-group">
+      <div class="navi-hud-pill" id="naviHudWrap" title="Estado del Sistema Navi">
+        <img src="/navi.gif" alt="Navi" class="navi-hud-img" id="naviGif"
+             onerror="this.style.display='none'; document.getElementById('naviSvgFallback').style.display='block'" />
+        <!-- SVG fallback -->
+        <div class="navi-hud-fallback" id="naviSvgFallback" style="display:none" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="16" cy="16" r="14" stroke="#0071e3" stroke-width="2"/>
+            <path d="M10 16L14 20L22 12" stroke="#0071e3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+
+      <div>
+        <h1 class="app-title">Navi Cleaner</h1>
+        <p class="app-subtitle">Suite Apple · Inteligencia de Escritorio y Procesos</p>
+      </div>
+    </div>
+
+    <!-- Header Stats & Power Button -->
+    <div class="header-stats">
+      <div class="stat-pill" id="statTotalFiles">
+        <span class="stat-label">Archivos Indexados</span>
+        <span class="stat-value" id="totalFilesVal">—</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-label">Juegos y Aplicaciones</span>
+        <span class="stat-value" id="totalAppsFootprintVal">—</span>
+      </div>
+      <div class="stat-pill" id="adminPill" title="Estado de privilegios">
+        <span class="stat-label">Elevación</span>
+        <span class="stat-value" id="adminStatusVal">—</span>
+      </div>
+      <div class="status-badge-wrap">
+        <span class="status-dot"></span>
+        <span class="status-label">En Línea</span>
+      </div>
+
+      <!-- Apple-styled Power / Shutdown Button -->
+      <button class="btn-power" id="btnPower" title="Apagar Navi Cleaner y cerrar interfaz de escritorio" aria-label="Apagar">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 3v9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M7.08 5.92A8 8 0 1016.92 5.92" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+        <span>Apagar</span>
+      </button>
+    </div>
+
+  </div>
+</header>
+
+<!-- ═══════════════════════════ TABS -->
+<nav class="tab-nav" role="tablist">
+  <button id="tabHome" class="tab-btn active" role="tab" aria-selected="true" aria-controls="panelHome">
+    <svg viewBox="0 0 20 20" fill="none"><path d="M10 3L3 9v8h4v-5h6v5h4V9l-7-6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+    Panel Principal
+  </button>
+  <button id="tabFileIndex" class="tab-btn" role="tab" aria-selected="false" aria-controls="panelFileIndex">
+    <svg viewBox="0 0 20 20" fill="none"><path d="M4 4h5l2 2h5v10H4V4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+    Índice de Archivos
+  </button>
+  <button id="tabAppsGames" class="tab-btn" role="tab" aria-selected="false" aria-controls="panelAppsGames">
+    <svg viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="10" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M6 10h3M7.5 8.5v3M13 9.5h1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    Aplicaciones y Juegos
+  </button>
+  <button id="tabLauncherCaches" class="tab-btn" role="tab" aria-selected="false" aria-controls="panelLauncherCaches">
+    <svg viewBox="0 0 20 20" fill="none"><path d="M3 5h14M5 5v10a2 2 0 002 2h6a2 2 0 002-2V5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 9v4M12 9v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    Cachés de Lanzadores
+  </button>
+  <button id="tabProcessMonitor" class="tab-btn" role="tab" aria-selected="false" aria-controls="panelProcessMonitor">
+    <svg viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M7 10h6M10 7v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    Seguridad de Procesos
+  </button>
+</nav>
+
+<!-- ═══════════════════════════ MAIN PANELS -->
+<main class="panels-wrap">
+
+  <!-- ── 0. DASHBOARD WELCOME HOMEPAGE ────────────────────────── -->
+  <section id="panelHome" class="panel active" role="tabpanel">
+    <div class="home-hero-card">
+      <div class="home-hero-text">
+        <h2 class="home-title">Panel Principal de Navi Cleaner</h2>
+        <p class="home-subtitle">Monitoreo inteligente de almacenamiento, clasificación universitaria multi-etiqueta y preparación para juegos con cero consumo en segundo plano.</p>
+      </div>
+      <div class="home-hero-actions">
+        <button class="btn-primary" id="homeBtnScanAll">
+          <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v4l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Ejecutar Escaneo Completo
+        </button>
+      </div>
+    </div>
+
+    <!-- Space Hogs Summary Cards -->
+    <div class="summary-cards-grid">
+      <div class="summary-metric-card" onclick="document.getElementById('tabAppsGames').click()">
+        <div class="metric-icon metric-icon--blue">
+          <svg viewBox="0 0 20 20" fill="none" width="22" height="22"><rect x="2" y="5" width="16" height="10" rx="3" stroke="#0071e3" stroke-width="1.6"/><path d="M6 10h3M7.5 8.5v3" stroke="#0071e3" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <div class="metric-body">
+          <span class="metric-label">Juegos y Aplicaciones</span>
+          <span class="metric-number" id="homeFootprintText">—</span>
+          <span class="metric-sub" id="homeAppsSub">Haz clic para explorar el Registro de Windows</span>
+        </div>
+      </div>
+
+      <div class="summary-metric-card" onclick="document.getElementById('tabLauncherCaches').click()">
+        <div class="metric-icon metric-icon--amber">
+          <svg viewBox="0 0 20 20" fill="none" width="22" height="22"><path d="M3 5h14M5 5v10a2 2 0 002 2h6a2 2 0 002-2V5" stroke="#f59e0b" stroke-width="1.6" stroke-linecap="round"/><path d="M8 9v4M12 9v4" stroke="#f59e0b" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <div class="metric-body">
+          <span class="metric-label">Cachés Secundarios de Lanzadores</span>
+          <span class="metric-number" id="homeCachesText">—</span>
+          <span class="metric-sub" id="homeCachesSub">Steam, Epic, Riot y EA App temporal</span>
+        </div>
+      </div>
+
+      <div class="summary-metric-card" onclick="document.getElementById('tabFileIndex').click()">
+        <div class="metric-icon metric-icon--violet">
+          <svg viewBox="0 0 20 20" fill="none" width="22" height="22"><path d="M4 4h5l2 2h5v10H4V4z" stroke="#8e8cd8" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="metric-body">
+          <span class="metric-label">Archivos Multi-Etiqueta</span>
+          <span class="metric-number" id="homeFilesText">—</span>
+          <span class="metric-sub" id="homeFilesSub">Trabajos universitarios e instaladores</span>
+        </div>
+      </div>
+
+      <div class="summary-metric-card" onclick="document.getElementById('tabProcessMonitor').click()">
+        <div class="metric-icon metric-icon--green">
+          <svg viewBox="0 0 20 20" fill="none" width="22" height="22"><rect x="3" y="3" width="14" height="14" rx="2.5" stroke="#34c759" stroke-width="1.6"/><path d="M7 10l2 2 4-4" stroke="#34c759" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="metric-body">
+          <span class="metric-label">Procesos Activos del Sistema</span>
+          <span class="metric-number" id="homeProcessesText">Limpio</span>
+          <span class="metric-sub" id="homeProcessesSub">Cero minería ni servicios maliciosos</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- High-Context Actionable Deletion Suggestions -->
+    <div class="suggestions-card">
+      <div class="suggestions-header">
+        <h3 class="suggestions-title">Acciones Rápidas Recomendadas</h3>
+        <span class="suggestions-meta">Recomendaciones prioritarias de alto contexto para liberar espacio en disco de forma segura</span>
+      </div>
+      <div class="suggestions-list" id="suggestionsList">
+        <!-- Will be dynamically populated with Anomaly 1 (0% utility), Anomaly 2 (large abandoned file), and Launcher Caches -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 1. FILE INDEX PANEL ────────────────────────── -->
+  <section id="panelFileIndex" class="panel" role="tabpanel" style="display:none">
+
+    <div class="panel-toolbar">
+      <div class="cluster-filters" id="clusterFiltersGroup" role="group" aria-label="Filtrar por clúster">
+        <button class="filter-btn active" data-cluster="all"         id="filterAll">Todos</button>
+        <button class="filter-btn"        data-cluster="Universidad" id="filterUniversidad">
+          <svg viewBox="0 0 16 16" fill="none" width="13" height="13"><path d="M8 2L1 5.5 8 9l7-3.5L8 2zM3 7.5V11l5 2.5 5-2.5V7.5" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+          Universidad
+        </button>
+        <button class="filter-btn"        data-cluster="Instaladores"id="filterInstaladores">
+          <svg viewBox="0 0 16 16" fill="none" width="13" height="13"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.3"/></svg>
+          Instaladores
+        </button>
+        <button class="filter-btn"        data-cluster="Multimedia"  id="filterMultimedia">
+          <svg viewBox="0 0 16 16" fill="none" width="13" height="13"><rect x="2" y="3" width="12" height="10" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M6 6.5l5 3-5 3v-6z" fill="currentColor"/></svg>
+          Multimedia
+        </button>
+        <button class="filter-btn"        data-cluster="Comprimidos" id="filterComprimidos">
+          <svg viewBox="0 0 16 16" fill="none" width="13" height="13"><rect x="3" y="2" width="10" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M6 5h4M6 8h4" stroke="currentColor" stroke-width="1.3"/></svg>
+          Comprimidos
+        </button>
+        <button class="filter-btn"        data-cluster="Otros"       id="filterOtros">
+          <svg viewBox="0 0 16 16" fill="none" width="13" height="13"><path d="M2 4h4l1.5 2H14v7H2V4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+          Otros
+        </button>
+      </div>
+
+      <button class="btn-primary" id="btnScan">
+        <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v4l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Escanear Ahora
+      </button>
+    </div>
+
+    <!-- Deep Sub-Tag Filter Bar (multi-tag classification) -->
+    <div class="subtag-toolbar" id="subTagToolbar">
+      <span class="subtag-label">Sub-Etiquetas Académicas:</span>
+      <div class="subtag-filters" id="subTagFilters">
+        <button class="subtag-btn active" data-subtag="all">Todas</button>
+        <button class="subtag-btn" data-subtag="Matemáticas &amp; Estadística">Matemáticas &amp; Estadística</button>
+        <button class="subtag-btn" data-subtag="Microeconomía &amp; Economía">Microeconomía &amp; Economía</button>
+        <button class="subtag-btn" data-subtag="Estrategia &amp; Gestión">Estrategia &amp; Gestión</button>
+        <button class="subtag-btn" data-subtag="Cartas &amp; Postulaciones">Cartas &amp; Postulaciones</button>
+      </div>
+    </div>
+
+    <!-- Cluster Overview Cards -->
+    <div class="cluster-cards" id="clusterCards">
+      <div class="cluster-card" data-cluster="Universidad"  id="cardUniversidad">
+        <div class="card-icon">
+          <svg viewBox="0 0 20 20" fill="none" width="20" height="20"><path d="M10 3L2 7.5 10 12l8-4.5L10 3zM4 9.5V14l6 3 6-3V9.5" stroke="#0071e3" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="card-info"><span class="card-label">Universidad</span><span class="card-count" id="countUniversidad">0</span></div>
+        <div class="card-bar"><div class="card-bar-fill" style="background:#0071e3"></div></div>
+      </div>
+      <div class="cluster-card" data-cluster="Instaladores" id="cardInstaladores">
+        <div class="card-icon">
+          <svg viewBox="0 0 20 20" fill="none" width="20" height="20"><circle cx="10" cy="10" r="7" stroke="#af52de" stroke-width="1.5"/><circle cx="10" cy="10" r="2.5" stroke="#af52de" stroke-width="1.5"/></svg>
+        </div>
+        <div class="card-info"><span class="card-label">Instaladores</span><span class="card-count" id="countInstaladores">0</span></div>
+        <div class="card-bar"><div class="card-bar-fill" style="background:#af52de"></div></div>
+      </div>
+      <div class="cluster-card" data-cluster="Multimedia"   id="cardMultimedia">
+        <div class="card-icon">
+          <svg viewBox="0 0 20 20" fill="none" width="20" height="20"><rect x="3" y="4" width="14" height="12" rx="2.5" stroke="#ff2d55" stroke-width="1.5"/><path d="M8 8l5 3-5 3V8z" fill="#ff2d55"/></svg>
+        </div>
+        <div class="card-info"><span class="card-label">Multimedia</span><span class="card-count" id="countMultimedia">0</span></div>
+        <div class="card-bar"><div class="card-bar-fill" style="background:#ff2d55"></div></div>
+      </div>
+      <div class="cluster-card" data-cluster="Comprimidos"  id="cardComprimidos">
+        <div class="card-icon">
+          <svg viewBox="0 0 20 20" fill="none" width="20" height="20"><rect x="4" y="3" width="12" height="14" rx="2.5" stroke="#ff9500" stroke-width="1.5"/><path d="M8 7h4M8 11h4" stroke="#ff9500" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="card-info"><span class="card-label">Comprimidos</span><span class="card-count" id="countComprimidos">0</span></div>
+        <div class="card-bar"><div class="card-bar-fill" style="background:#ff9500"></div></div>
+      </div>
+      <div class="cluster-card" data-cluster="Otros"        id="cardOtros">
+        <div class="card-icon">
+          <svg viewBox="0 0 20 20" fill="none" width="20" height="20"><path d="M3 5h5l2 2.5h7v8.5H3V5z" stroke="#6e6e73" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="card-info"><span class="card-label">Otros</span><span class="card-count" id="countOtros">0</span></div>
+        <div class="card-bar"><div class="card-bar-fill" style="background:#6e6e73"></div></div>
+      </div>
+    </div>
+
+    <!-- Scan Progress Bar -->
+    <div class="scan-progress-wrap" id="scanProgressWrap" style="display:none">
+      <div class="scan-progress-inner">
+        <div class="scan-pulse" aria-hidden="true"></div>
+        <span class="scan-label" id="scanLabel">Escaneando directorios locales…</span>
+        <span class="scan-count" id="scanCount">0 archivos</span>
+      </div>
+      <div class="progress-bar-track"><div class="progress-bar-fill" id="progressBarFill"></div></div>
+    </div>
+
+    <!-- File Table with 3-Step Cyclic Column Sorting -->
+    <div class="table-container">
+      <div class="table-header-bar">
+        <h2 class="table-title" id="tableTitle">Todos los Archivos</h2>
+        <span class="table-meta" id="tableMeta">0 archivos</span>
+      </div>
+      <div class="table-scroll">
+        <table class="file-table" id="fileTable">
+          <colgroup>
+            <col class="col-name"     />
+            <col class="col-cluster"  />
+            <col class="col-subtag"   />
+            <col class="col-conf"     />
+            <col class="col-size"     />
+            <col class="col-ext"      />
+            <col class="col-keywords" />
+            <col class="col-mtime"    />
+            <col class="col-actions"  />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Nombre del Archivo</th>
+              <th>Clúster</th>
+              <th>Sub-Etiquetas</th>
+              <th class="th-sortable" id="thFileConf" title="Haz clic para alternar orden de Confianza (Descendente / Ascendente / Sin Ordenar)">
+                Confianza <span class="sort-indicator" id="indFileConf"></span>
+              </th>
+              <th class="th-sortable" id="thFileSize" title="Haz clic para alternar orden de Tamaño (Descendente / Ascendente / Sin Ordenar)">
+                Tamaño <span class="sort-indicator" id="indFileSize"></span>
+              </th>
+              <th>Extensión</th>
+              <th>Palabras Clave</th>
+              <th>Modificado</th>
+              <th class="col-actions">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="fileTableBody">
+            <tr class="empty-row"><td colspan="9">
+              <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" width="32" height="32"><path d="M4 6h6l2 3h8v9H4V6z" stroke="#86868b" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                <p>Aún no hay archivos indexados. Haz clic en <strong>Escanear Ahora</strong> para indexar.</p>
+              </div>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 2. APPLICATIONS & GAMES PANEL ────────────────────────── -->
+  <section id="panelAppsGames" class="panel" role="tabpanel" style="display:none">
+
+    <!-- Native App Category Header Filter Bar -->
+    <div class="subtag-toolbar" id="appFilterBar">
+      <span class="subtag-label">Categoría de Aplicación:</span>
+      <div class="subtag-filters" id="appFilters">
+        <button class="app-filter-btn active" data-appfilter="all">Todas</button>
+        <button class="app-filter-btn" data-appfilter="launchers">Juegos y Lanzadores</button>
+        <button class="app-filter-btn" data-appfilter="vendor">Fabricante / Hardware</button>
+        <button class="app-filter-btn" data-appfilter="bloatware">Preinstaladas / Bloatware</button>
+        <button class="app-filter-btn" data-appfilter="drivers">Controladores / Drivers</button>
+      </div>
+    </div>
+
+    <div class="panel-toolbar">
+      <div class="threat-summary">
+        <div class="threat-badge clean" style="background:rgba(0,113,227,0.1);border-color:rgba(0,113,227,0.25);color:#0071e3">
+          <span class="badge-dot" style="background:#0071e3"></span>
+          <span id="badgeGamesCount">0</span> Juegos Detectados
+        </div>
+        <div class="threat-badge clean">
+          <span class="badge-dot"></span>
+          <span id="badgeAppsCount">0</span> Aplicaciones
+        </div>
+      </div>
+      <div class="proc-actions">
+        <span class="last-scan-label" id="appsSummarySize">— MB en total</span>
+        <button class="btn-primary" id="btnScanApps">
+          <svg viewBox="0 0 20 20" fill="none"><path d="M4 10a6 6 0 1012 0 6 6 0 00-12 0z" stroke="currentColor" stroke-width="1.5"/><path d="M4 6V4h2M16 14v2h-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Escanear Registro
+        </button>
+      </div>
+    </div>
+
+    <!-- Apps Table with 3-Step Cyclic Column Sorting -->
+    <div class="table-container">
+      <div class="table-header-bar">
+        <h2 class="table-title">Aplicaciones y Juegos Instalados en Windows</h2>
+        <span class="table-meta" id="appsTableMeta">0 aplicaciones</span>
+      </div>
+      <div class="table-scroll">
+        <table class="file-table" id="appsTable">
+          <colgroup>
+            <col class="col-name"    />
+            <col class="col-cat"     />
+            <col class="col-ver"     />
+            <col class="col-size"    />
+            <col class="col-score"   />
+            <col class="col-path"    />
+            <col class="col-actions" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Aplicación / Juego</th>
+              <th>Categoría</th>
+              <th>Versión</th>
+              <th class="th-sortable" id="thAppSize" title="Haz clic para alternar orden por Tamaño (Descendente / Ascendente / Sin Ordenar)">
+                Tamaño <span class="sort-indicator" id="indAppSize"></span>
+              </th>
+              <th class="th-sortable" id="thAppScore" title="Haz clic para alternar orden por Puntuación de Utilidad (Descendente / Ascendente / Sin Ordenar)">
+                Puntuación de Utilidad <span class="sort-indicator" id="indAppScore"></span>
+              </th>
+              <th>Ruta de Instalación</th>
+              <th class="col-actions">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="appsTableBody">
+            <tr class="empty-row"><td colspan="7">
+              <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" width="32" height="32"><rect x="3" y="6" width="18" height="12" rx="3" stroke="#86868b" stroke-width="1.5"/><path d="M8 12h3M9.5 10.5v3" stroke="#86868b" stroke-width="1.5" stroke-linecap="round"/></svg>
+                <p>Haz clic en <strong>Escanear Registro</strong> para analizar los juegos y software instalados.</p>
+              </div>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 3. LAUNCHER CACHES PANEL ────────────────────────── -->
+  <section id="panelLauncherCaches" class="panel" role="tabpanel" style="display:none">
+
+    <div class="panel-toolbar">
+      <div class="threat-summary">
+        <div class="threat-badge suspicious" id="cachesTotalBadge">
+          <span class="badge-dot"></span>
+          <span id="cachesTotalMB">0 MB</span> Caché Secundario Detectado
+        </div>
+      </div>
+      <div class="proc-actions">
+        <button class="btn-primary" id="btnRefreshCaches">
+          <svg viewBox="0 0 20 20" fill="none"><path d="M4 10a6 6 0 1012 0 6 6 0 00-12 0z" stroke="currentColor" stroke-width="1.5"/></svg>
+          Escanear Cachés
+        </button>
+        <button class="btn-danger" id="btnPurgeAllCaches">
+          <svg viewBox="0 0 20 20" fill="none"><path d="M5 6h10l-1 10H6L5 6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 6V4h4v2M3 6h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Purgar Toda la Basura Secundaria
+        </button>
+      </div>
+    </div>
+
+    <!-- Caches Table -->
+    <div class="table-container">
+      <div class="table-header-bar">
+        <h2 class="table-title">Carpetas de Caché Secundario (Web y Logs) de Lanzadores</h2>
+        <span class="table-meta">Solo cachés temporales — tus instalaciones de juegos están 100% protegidas</span>
+      </div>
+      <div class="table-scroll">
+        <table class="file-table" id="cachesTable">
+          <thead>
+            <tr>
+              <th>Lanzador</th>
+              <th>Tipo de Caché</th>
+              <th>Ruta del Directorio</th>
+              <th>Estado</th>
+              <th>Tamaño del Caché</th>
+              <th class="col-actions">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="cachesTableBody">
+            <tr class="empty-row"><td colspan="6">
+              <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" width="32" height="32"><path d="M3 6h18M5 6v12a2 2 0 002 2h10a2 2 0 002-2V6" stroke="#86868b" stroke-width="1.5" stroke-linecap="round"/></svg>
+                <p>Haz clic en <strong>Escanear Cachés</strong> para examinar archivos temporales.</p>
+              </div>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 4. PROCESS MONITOR PANEL ─────────────────── -->
+  <section id="panelProcessMonitor" class="panel" role="tabpanel" style="display:none">
+
+    <div class="panel-toolbar">
+      <div class="threat-summary">
+        <div class="threat-badge critical"><span class="badge-dot"></span><span id="badgeCriticalCount">0</span> Crítico</div>
+        <div class="threat-badge suspicious"><span class="badge-dot"></span><span id="badgeSuspiciousCount">0</span> Sospechoso</div>
+        <div class="threat-badge clean"><span class="badge-dot"></span><span id="badgeCleanCount">0</span> Limpio</div>
+      </div>
+      <div class="proc-actions">
+        <span class="last-scan-label" id="lastScanLabel">Sin escanear aún</span>
+        <button class="btn-primary" id="btnRefreshProcesses">
+          <svg viewBox="0 0 20 20" fill="none"><path d="M4 10a6 6 0 1012 0 6 6 0 00-12 0z" stroke="currentColor" stroke-width="1.5"/><path d="M4 6V4h2M16 14v2h-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Actualizar Escaneo
+        </button>
+      </div>
+    </div>
+
+    <!-- Process Table -->
+    <div class="table-container">
+      <div class="table-header-bar">
+        <h2 class="table-title">Procesos Activos</h2>
+        <span class="table-meta" id="procTableMeta">0 procesos</span>
+      </div>
+      <div class="table-scroll">
+        <table class="proc-table" id="procTable">
+          <thead>
+            <tr>
+              <th>Amenaza</th>
+              <th>Categoría</th>
+              <th>Proceso</th>
+              <th>PID</th>
+              <th>CPU %</th>
+              <th>RAM (MB)</th>
+              <th>Alertas</th>
+              <th>Ruta</th>
+            </tr>
+          </thead>
+          <tbody id="procTableBody">
+            <tr class="empty-row"><td colspan="8">
+              <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" width="32" height="32"><circle cx="11" cy="11" r="7" stroke="#86868b" stroke-width="1.5"/><path d="M16 16l4 4" stroke="#86868b" stroke-width="1.5" stroke-linecap="round"/></svg>
+                <p>Haz clic en <strong>Actualizar Escaneo</strong> para analizar procesos activos.</p>
+              </div>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ═══════════════════════════ FILE PREVIEW DRAWER -->
+<div class="preview-overlay" id="previewOverlay" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Vista Previa del Archivo">
+  <div class="preview-drawer" id="previewDrawer">
+
+    <div class="preview-header">
+      <div class="preview-title-group">
+        <div class="preview-icon-wrap" id="previewIconWrap">
+          <svg viewBox="0 0 20 20" fill="none" width="18" height="18"><path d="M5 3h7l5 5v9a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" stroke="#0071e3" stroke-width="1.5"/></svg>
+        </div>
+        <div>
+          <h3 class="preview-filename" id="previewFilename">archivo.pdf</h3>
+          <p class="preview-meta-line" id="previewMetaLine">— · —</p>
+        </div>
+      </div>
+      <button class="preview-close-btn" id="previewCloseBtn" aria-label="Cerrar vista previa">
+        <svg viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div class="preview-badge-row" id="previewBadgeRow"></div>
+
+    <div class="preview-content" id="previewContent">
+      <div class="preview-pdf-wrap" id="previewPdfWrap" style="display:none">
+        <object id="previewPdfObject" class="preview-pdf-frame" type="application/pdf" aria-label="Vista Previa PDF">
+          <iframe id="previewPdfFrame" title="Vista Previa PDF" class="preview-pdf-frame" allowfullscreen></iframe>
+        </object>
+      </div>
+
+      <div class="preview-image-wrap" id="previewImageWrap" style="display:none">
+        <img id="previewImage" src="" alt="Vista previa de archivo" class="preview-image" />
+      </div>
+
+      <div class="preview-fallback" id="previewFallback" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" width="40" height="40"><path d="M5 4h9l5 5v11a2 2 0 01-2 2H5a2 2 0 01-2-6a2 2 0 012-2z" stroke="#86868b" stroke-width="1.5"/></svg>
+        <p class="fallback-title" id="previewFallbackTitle">Vista previa en línea no disponible</p>
+        <p class="fallback-sub">Usa Mostrar en Explorador para examinar este archivo en tu sistema.</p>
+      </div>
+    </div>
+
+    <div class="preview-actions">
+      <button class="btn-explorer" id="previewBtnExplorer">
+        <svg viewBox="0 0 20 20" fill="none"><path d="M4 10h12M10 4l6 6-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Mostrar en Explorador
+      </button>
+      <button class="btn-purge" id="previewBtnPurge">
+        <svg viewBox="0 0 20 20" fill="none"><path d="M5 6h10l-1 10H6L5 6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 6V4h4v2M3 6h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Purgar Archivo
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ PURGE CONFIRM MODAL -->
+<div class="modal-overlay" id="purgeModalOverlay" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="modal-box" id="purgeModal">
+    <div class="modal-icon-wrap modal-icon--danger">
+      <svg viewBox="0 0 24 24" fill="none" width="24" height="24"><path d="M12 9v4M12 17h.01" stroke="#ff3b30" stroke-width="2" stroke-linecap="round"/><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#ff3b30" stroke-width="1.8" stroke-linejoin="round"/></svg>
+    </div>
+    <h3 class="modal-title">¿Eliminar Permanentemente el Archivo?</h3>
+    <p class="modal-body">Esta acción es irreversible. El archivo será borrado de forma definitiva de tu disco.</p>
+    <div class="modal-filename" id="purgeModalFilename"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="purgeCancelBtn">Cancelar</button>
+      <button class="btn-confirm-purge" id="purgeConfirmBtn">Sí, Eliminar Permanentemente</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ UNINSTALL / FORCE PURGE APP MODAL -->
+<div class="modal-overlay" id="appModalOverlay" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="modal-box" id="appModal">
+    <div class="modal-icon-wrap modal-icon--danger">
+      <svg viewBox="0 0 24 24" fill="none" width="24" height="24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke="#ff3b30" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <h3 class="modal-title" id="appModalTitle">¿Desinstalar Aplicación?</h3>
+    <p class="modal-body" id="appModalBody">Selecciona desinstalación silenciosa o purgado forzado de la carpeta.</p>
+    <div class="modal-filename" id="appModalName"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="appCancelBtn">Cancelar</button>
+      <button class="btn-confirm-purge" id="appConfirmBtn">Proceder</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ POWER CONFIRM MODAL -->
+<div class="modal-overlay" id="powerModalOverlay" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="modal-box modal-box--power" id="powerModal">
+    <div class="modal-icon-wrap modal-icon--power">
+      <svg viewBox="0 0 24 24" fill="none" width="24" height="24"><path d="M12 3v9" stroke="#0071e3" stroke-width="2.2" stroke-linecap="round"/><path d="M7.08 5.92A8 8 0 1016.92 5.92" stroke="#0071e3" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </div>
+    <h3 class="modal-title">¿Apagar Navi Cleaner?</h3>
+    <p class="modal-body">Cierra el servidor y termina automáticamente esta ventana para liberar 100% de CPU y RAM antes de jugar.</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="powerCancelBtn">Cancelar</button>
+      <button class="btn-confirm-power" id="powerConfirmBtn">Apagar Ahora</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ PROCESS ALERT & KILL MODAL -->
+<div class="modal-overlay" id="procModalOverlay" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="modal-box" id="procModal">
+    <div class="modal-icon-wrap modal-icon--danger">
+      <svg viewBox="0 0 24 24" fill="none" width="24" height="24"><path d="M12 9v4M12 17h.01" stroke="#ff3b30" stroke-width="2" stroke-linecap="round"/><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#ff3b30" stroke-width="1.8" stroke-linejoin="round"/></svg>
+    </div>
+    <h3 class="modal-title" id="procModalTitle">Detalle de Alerta de Proceso</h3>
+    <p class="modal-body" id="procModalDesc" style="margin-bottom: 12px; font-size: 0.88rem; color: var(--text-primary);"></p>
+    <div style="background: rgba(255,59,48,0.08); border: 1px solid rgba(255,59,48,0.25); padding: 10px 14px; border-radius: 8px; margin-bottom: 16px;">
+      <p id="procModalRec" style="font-size: 0.82rem; font-weight: 600; color: #d70015; margin: 0;">Te recomendamos finalizar y desinstalar esta aplicación para proteger el rendimiento de tus juegos.</p>
+    </div>
+    <div class="modal-filename" id="procModalMeta" style="font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;"></div>
+    <div class="modal-actions" style="margin-top: 18px; justify-content: flex-end; gap: 8px;">
+      <button class="btn-cancel" id="procModalCloseBtn">Cerrar</button>
+      <button class="btn-action" id="procModalExplorerBtn" style="display:none;">Ver en Explorador</button>
+      <button class="btn-confirm-purge" id="procModalKillBtn">Finalizar Proceso (taskkill /F)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ INITIAL ROOT DEEP SCAN MODAL (30-MIN NOTICE) -->
+<div class="modal-overlay" id="initialScanModalOverlay" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="modal-box" id="initialScanModal" style="max-width: 520px;">
+    <div class="modal-icon-wrap" style="background: rgba(0, 113, 227, 0.12); color: #0071e3;">
+      <svg viewBox="0 0 24 24" fill="none" width="26" height="26"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </div>
+    <h3 class="modal-title">Indexación Profunda Inteligente (Raíz C:\)</h3>
+    <p class="modal-body" style="font-size: 0.92rem; line-height: 1.5; color: var(--text-primary); margin-bottom: 16px;">
+      El primer escaneo profundo está analizando la raíz completa de su sistema para estructurar el cerebro inteligente local. Este proceso inicial es exhaustivo y puede tomar hasta 30 minutos según el volumen de datos.
+    </p>
+    <div style="background: rgba(0, 113, 227, 0.07); border: 1px solid rgba(0, 113, 227, 0.22); padding: 12px 15px; border-radius: 10px; margin-bottom: 18px;">
+      <p style="font-size: 0.81rem; color: #0051a3; margin: 0; font-weight: 600;">
+        ✨ Los escaneos posteriores cambiarán a modo delta instantáneo, procesando únicamente archivos modificados o nuevos.
+      </p>
+    </div>
+    <div class="modal-actions" style="justify-content: flex-end; gap: 10px;">
+      <button class="btn-cancel" id="initialScanCancelBtn">Cancelar</button>
+      <button class="btn-primary" id="initialScanConfirmBtn">Comenzar Escaneo Profundo Raíz (Hasta 30 min)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ TOAST -->
+<div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
