@@ -23,4 +23,8 @@ Desktop.ini
 
 # Environment variables
 .env
+
+# Built standalone binaries (>100MB limit for Git push; distributed via GitHub Releases)
+*.exe
+Navi Cleaner-mac
 .env.local

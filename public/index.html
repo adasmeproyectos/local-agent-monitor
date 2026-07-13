@@ -59,6 +59,12 @@
         <span class="status-label">En Línea</span>
       </div>
 
+      <!-- Re-escanear Sistema Completo (Strict 3-step fail-safe confirmation) -->
+      <button class="btn-rescan-header" id="btnRescanHeader" title="Re-escanear todo el sistema (Confirmación estricta de seguridad)">
+        <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><path d="M4 10a6 6 0 1111.4 2.5m.6 3.5v-4h-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Re-escanear Sistema Completo</span>
+      </button>
+
       <!-- Apple-styled Power / Shutdown Button -->
       <button class="btn-power" id="btnPower" title="Apagar Navi Cleaner y cerrar interfaz de escritorio" aria-label="Apagar">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -81,6 +87,10 @@
   <button id="tabFileIndex" class="tab-btn" role="tab" aria-selected="false" aria-controls="panelFileIndex">
     <svg viewBox="0 0 20 20" fill="none"><path d="M4 4h5l2 2h5v10H4V4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
     Índice de Archivos
+  </button>
+  <button id="tabBurstOrganizer" class="tab-btn" role="tab" aria-selected="false" aria-controls="panelBurstOrganizer">
+    <svg viewBox="0 0 20 20" fill="none"><path d="M4 6h12M4 10h12M4 14h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="15" cy="14" r="2" stroke="currentColor" stroke-width="1.5"/></svg>
+    Organizador de Ráfagas
   </button>
   <button id="tabAppsGames" class="tab-btn" role="tab" aria-selected="false" aria-controls="panelAppsGames">
     <svg viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="10" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M6 10h3M7.5 8.5v3M13 9.5h1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -313,6 +323,21 @@
             </td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── ORGANIZADOR DE RÁFAGAS PANEL ────────────────────────── -->
+  <section id="panelBurstOrganizer" class="panel" role="tabpanel" style="display:none">
+    <div class="suggestions-card" style="margin-bottom:24px;">
+      <div class="suggestions-header">
+        <h3 class="suggestions-title">Detectamos ráfagas temporales de archivos similares</h3>
+        <span class="suggestions-meta">Te recomendamos agrupar en carpetas unificadas los archivos descargados el mismo día en períodos breves de tiempo. Ningún archivo será movido sin tu autorización explícita.</span>
+      </div>
+    </div>
+    <div id="burstCardsContainer">
+      <div class="empty-state" style="padding:40px;">
+        <p>Buscando ráfagas temporales de imágenes y documentos en tu índice...</p>
       </div>
     </div>
   </section>
@@ -639,6 +664,21 @@
     <div class="modal-actions" style="justify-content: flex-end; gap: 10px;">
       <button class="btn-cancel" id="initialScanCancelBtn">Cancelar</button>
       <button class="btn-primary" id="initialScanConfirmBtn">Comenzar Escaneo Profundo Raíz (Hasta 30 min)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ RESCAN 3-STEP FAIL-SAFE MODAL -->
+<div class="modal-overlay" id="rescanModalOverlay" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="modal-box" id="rescanModalBox" style="max-width: 500px;">
+    <div class="modal-icon-wrap" style="background: rgba(0, 113, 227, 0.12); color: #0071e3;">
+      <svg viewBox="0 0 24 24" fill="none" width="24" height="24"><path d="M4 12a8 8 0 018-8m8 8a8 8 0 01-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </div>
+    <h3 class="modal-title" id="rescanStepTitle">Paso 1 de 3: Confirmación Estricta</h3>
+    <p class="modal-body" id="rescanStepDesc" style="font-size:0.94rem; margin-bottom: 20px;">¿Está seguro que desea re-escanear todo el sistema?</p>
+    <div class="modal-actions" style="justify-content: flex-end; gap: 10px;">
+      <button class="btn-cancel" id="rescanCancelBtn">Cancelar</button>
+      <button class="btn-primary" id="rescanNextBtn">Continuar (Paso 2)</button>
     </div>
   </div>
 </div>

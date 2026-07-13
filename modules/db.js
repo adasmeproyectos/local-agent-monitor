@@ -40,7 +40,8 @@ function getDb() {
       sub_tag     TEXT,
       confidence  REAL,
       keywords    TEXT,
-      indexed_at  TEXT
+      indexed_at  TEXT,
+      volume      TEXT
     );
 
     CREATE TABLE IF NOT EXISTS scan_sessions (
@@ -61,18 +62,35 @@ function getDb() {
     CREATE INDEX IF NOT EXISTS idx_files_cluster ON files(cluster);
     CREATE INDEX IF NOT EXISTS idx_files_sub_tag ON files(sub_tag);
     CREATE INDEX IF NOT EXISTS idx_files_ext     ON files(ext);
+    CREATE INDEX IF NOT EXISTS idx_files_volume  ON files(volume);
   `);
 
+  try {
+    _db.exec('ALTER TABLE files ADD COLUMN volume TEXT');
+  } catch { /* column already exists */ }
+
   return _db;
+}
+
+function extractVolume(filePath) {
+  if (!filePath) return 'C:\\';
+  if (process.platform === 'win32') {
+    const match = filePath.match(/^([a-zA-Z]:\\)/);
+    return match ? match[1].toUpperCase() : 'C:\\';
+  } else {
+    const match = filePath.match(/^(\/Volumes\/[^/]+)/);
+    return match ? match[1] : '/';
+  }
 }
 
 // ─── File Index CRUD ──────────────────────────────────────────────────────────
 
 const upsertFile = (file) => {
   const db = getDb();
+  const volume = file.volume || extractVolume(file.path);
   const stmt = db.prepare(`
-    INSERT INTO files (path, name, ext, size, mtime, cluster, sub_tag, confidence, keywords, indexed_at)
-    VALUES (@path, @name, @ext, @size, @mtime, @cluster, @sub_tag, @confidence, @keywords, @indexed_at)
+    INSERT INTO files (path, name, ext, size, mtime, cluster, sub_tag, confidence, keywords, indexed_at, volume)
+    VALUES (@path, @name, @ext, @size, @mtime, @cluster, @sub_tag, @confidence, @keywords, @indexed_at, @volume)
     ON CONFLICT(path) DO UPDATE SET
       size       = excluded.size,
       mtime      = excluded.mtime,
@@ -80,10 +98,12 @@ const upsertFile = (file) => {
       sub_tag    = excluded.sub_tag,
       confidence = excluded.confidence,
       keywords   = excluded.keywords,
-      indexed_at = excluded.indexed_at
+      indexed_at = excluded.indexed_at,
+      volume     = excluded.volume
   `);
   return stmt.run({
     ...file,
+    volume,
     sub_tag: file.sub_tag || null,
   });
 };
@@ -185,7 +205,11 @@ function completeSession(sessionId, totalFiles) {
   `).run(new Date().toISOString(), totalFiles, sessionId);
 }
 
-// ─── Lifecycle ────────────────────────────────────────────────────────────────
+function resetDeltaCache() {
+  const db = getDb();
+  db.prepare('DELETE FROM files').run();
+  db.prepare('DELETE FROM scan_sessions').run();
+}
 
 function closeDb() {
   if (_db) {
@@ -204,6 +228,8 @@ module.exports = {
   reclassifyFile,
   startSession,
   completeSession,
+  resetDeltaCache,
+  extractVolume,
   closeDb,
   DB_PATH,
 };

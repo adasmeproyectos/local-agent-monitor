@@ -91,16 +91,20 @@ async function processBatch(filePaths, options = {}) {
 
 async function runScan(targetDirs, options = {}) {
   const isInitialScan = Boolean(options.isInitialScan);
-  const maxDepth      = isInitialScan ? 12 : 8;
-  const batchSize     = isInitialScan ? 100 : 50;
+  let effectiveDirs = targetDirs;
+  if (!effectiveDirs || effectiveDirs.length === 0 || isInitialScan) {
+    effectiveDirs = await discoverStorageDrives();
+  }
+  const maxDepth  = isInitialScan ? 14 : 8;
+  const batchSize = isInitialScan ? 100 : 50;
 
-  const sessionId = startSession(targetDirs);
-  emit('start', { sessionId, targetDirs, isInitialScan });
+  const sessionId = startSession(effectiveDirs);
+  emit('start', { sessionId, targetDirs: effectiveDirs, isInitialScan });
 
   let indexed = 0;
   let batch   = [];
 
-  for (const dir of targetDirs) {
+  for (const dir of effectiveDirs) {
     emit('dir', { dir });
     for await (const filePath of walkDir(dir, 0, maxDepth)) {
       batch.push(filePath);
@@ -155,7 +159,43 @@ function sanitizeSubTagName(subTag) {
     .slice(0, 60);
 }
 
-async function organizeAcademicFiles(destRoot, files = [], targetCluster = null) {
+// ─── Multi-Drive Comprehensive Discovery Engine (Windows & macOS) ─────────────
+
+async function discoverStorageDrives() {
+  const drives = [];
+  if (process.platform === 'win32') {
+    const letters = ['C:\\', 'D:\\', 'E:\\', 'F:\\', 'G:\\', 'H:\\'];
+    for (const letter of letters) {
+      try {
+        await fsp.access(letter);
+        drives.push(letter);
+      } catch { /* drive not mounted or unreadable */ }
+    }
+    // Ensure primary user directories are explicitly included if C:\ is readable
+    const homeDir = require('os').homedir();
+    if (!drives.includes(homeDir)) drives.push(homeDir);
+  } else if (process.platform === 'darwin') {
+    const homeDir = require('os').homedir();
+    drives.push(homeDir);
+    try {
+      const volEntries = await fsp.readdir('/Volumes', { withFileTypes: true });
+      for (const ent of volEntries) {
+        const volPath = path.join('/Volumes', ent.name);
+        drives.push(volPath);
+      }
+    } catch { /* /Volumes not accessible */ }
+  } else {
+    drives.push(require('os').homedir());
+  }
+  return [...new Set(drives)];
+}
+
+async function organizeAcademicFiles(destRoot, files = [], targetCluster = null, options = {}) {
+  // CRITICAL FAIL-SAFE HUMAN-CONFIRMATION MATRIX
+  if (!options || !options.explicitUserAuthorized) {
+    throw new Error('FAIL-SAFE SAFETY RESTRICTION: Autonomous file movement is strictly forbidden without explicit user confirmation click.');
+  }
+
   let moved   = 0;
   let skipped = 0;
   const errors = [];
@@ -194,4 +234,4 @@ async function organizeAcademicFiles(destRoot, files = [], targetCluster = null)
   return { moved, skipped, errors, total: targets.length };
 }
 
-module.exports = { runScan, onProgress, organizeAcademicFiles };
+module.exports = { runScan, onProgress, organizeAcademicFiles, discoverStorageDrives };

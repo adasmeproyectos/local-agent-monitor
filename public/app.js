@@ -43,6 +43,7 @@ const subTagToolbar         = document.getElementById('subTagToolbar');
 const tabBtns = {
   Home:           document.getElementById('tabHome'),
   FileIndex:      document.getElementById('tabFileIndex'),
+  BurstOrganizer: document.getElementById('tabBurstOrganizer'),
   AppsGames:      document.getElementById('tabAppsGames'),
   LauncherCaches: document.getElementById('tabLauncherCaches'),
   ProcessMonitor: document.getElementById('tabProcessMonitor'),
@@ -50,6 +51,7 @@ const tabBtns = {
 const panels = {
   Home:           document.getElementById('panelHome'),
   FileIndex:      document.getElementById('panelFileIndex'),
+  BurstOrganizer: document.getElementById('panelBurstOrganizer'),
   AppsGames:      document.getElementById('panelAppsGames'),
   LauncherCaches: document.getElementById('panelLauncherCaches'),
   ProcessMonitor: document.getElementById('panelProcessMonitor'),
@@ -66,6 +68,7 @@ function switchTab(tabName) {
   });
   if (tabName === 'Home')           loadDashboardHome();
   if (tabName === 'FileIndex')      loadFiles();
+  if (tabName === 'BurstOrganizer') loadBursts();
   if (tabName === 'AppsGames')      loadApplications();
   if (tabName === 'LauncherCaches') loadLauncherCaches();
   if (tabName === 'ProcessMonitor') loadProcesses();
@@ -940,6 +943,122 @@ function escapeHtml(str) {
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 }
+
+/* ─── ORGANIZADOR DE RÁFAGAS (SMART TEMPORAL CLUSTERING) ──────────────────────── */
+async function loadBursts() {
+  const container = document.getElementById('burstCardsContainer');
+  if (!container) return;
+  container.innerHTML = `<div class="empty-state" style="padding:40px;"><p>Consultando ráfagas temporales en la base de datos inteligente...</p></div>`;
+  try {
+    const res = await fetch('/api/bursts').then(r => r.json());
+    if (!res.ok || !res.bursts || res.bursts.length === 0) {
+      container.innerHTML = `<div class="empty-state" style="padding:40px;"><p>No se encontraron ráfagas temporales de archivos en una misma fecha.</p></div>`;
+      return;
+    }
+    let html = `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 18px;">`;
+    res.bursts.forEach((b, idx) => {
+      const sampleList = b.sampleFiles.map(f => `<li><code>${escapeHtml(f.name)}</code> (${formatSize(f.size)})</li>`).join('');
+      const encPaths = encodeURIComponent(JSON.stringify(b.allFilePaths));
+      html += `
+        <div class="summary-metric-card" style="display:block; padding: 20px; cursor:default;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <span style="font-weight:700; font-size:1.05rem; color:var(--text-primary);">📅 Ráfaga del ${escapeHtml(b.date)}</span>
+            <span class="cluster-badge badge-info">${b.count} Archivos</span>
+          </div>
+          <p style="font-size:0.84rem; color:var(--text-secondary); margin-bottom:10px;">Tamaño total: <strong>${formatSize(b.totalSize)}</strong></p>
+          <ul style="font-size:0.78rem; color:var(--text-secondary); margin-left:16px; margin-bottom:14px; max-height:110px; overflow-y:auto;">
+            ${sampleList}
+          </ul>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <input type="text" id="burstFolder_${idx}" value="Ráfaga_${b.date}" style="flex:1; padding:7px 11px; border:1px solid var(--border-color); border-radius:8px; font-size:0.83rem;" placeholder="Nombre de carpeta">
+            <button class="btn-primary" style="padding:7px 13px; font-size:0.82rem;" onclick="groupBurst(${idx}, '${encPaths}')">
+              Agrupar Ráfaga
+            </button>
+          </div>
+        </div>
+      `;
+    });
+    html += `</div>`;
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state" style="padding:40px;"><p>Error cargando ráfagas: ${escapeHtml(err.message)}</p></div>`;
+  }
+}
+
+async function groupBurst(idx, encPathsStr) {
+  const inputEl = document.getElementById(`burstFolder_${idx}`);
+  const folderName = inputEl ? inputEl.value.trim() : 'Ráfaga Agrupada';
+  let filePaths = [];
+  try { filePaths = JSON.parse(decodeURIComponent(encPathsStr)); } catch {}
+
+  // FAIL-SAFE HUMAN CONFIRMATION CLICK ENFORCED
+  showToast(`Agrupando ${filePaths.length} archivos en carpeta "${folderName}"...`);
+  const res = await fetch('/api/bursts/group', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ folderName, filePaths, confirmedByUserClick: true })
+  }).then(r => r.json());
+
+  if (res.ok) {
+    showToast(`✅ ${res.moved} archivos movidos a ${res.destDir}`);
+    loadBursts();
+  } else {
+    showToast(`❌ Error: ${res.error}`);
+  }
+}
+
+/* ─── 3-STEP FAIL-SAFE RESCAN CONFIRMATION MODAL ─────────────────────────────── */
+let rescanStep = 1;
+
+const btnRescanHeader = document.getElementById('btnRescanHeader');
+if (btnRescanHeader) {
+  btnRescanHeader.addEventListener('click', () => {
+    rescanStep = 1;
+    updateRescanModalUI();
+    document.getElementById('rescanModalOverlay')?.classList.add('show');
+  });
+}
+
+function updateRescanModalUI() {
+  const title = document.getElementById('rescanStepTitle');
+  const desc  = document.getElementById('rescanStepDesc');
+  const nextBtn = document.getElementById('rescanNextBtn');
+  if (!title || !desc || !nextBtn) return;
+
+  if (rescanStep === 1) {
+    title.textContent = 'Paso 1 de 3: Confirmación Estricta';
+    desc.textContent  = '¿Está seguro que desea re-escanear todo el sistema?';
+    nextBtn.textContent = 'Continuar (Paso 2)';
+  } else if (rescanStep === 2) {
+    title.textContent = 'Paso 2 de 3: Sobrescribir Índice';
+    desc.textContent  = '¿Desea sobrescribir el índice local y reiniciar la caché de escaneo delta?';
+    nextBtn.textContent = 'Continuar (Paso 3)';
+  } else if (rescanStep === 3) {
+    title.textContent = 'Paso 3 de 3: Escaneo Profundo Multi-Unidad';
+    desc.textContent  = 'Esta acción iniciará el escaneo profundo de 30 minutos por todas las unidades de almacenamiento. ¿Proceder?';
+    nextBtn.textContent = 'Proceder con Re-escaneo';
+  }
+}
+
+document.getElementById('rescanCancelBtn')?.addEventListener('click', () => {
+  document.getElementById('rescanModalOverlay')?.classList.remove('show');
+});
+
+document.getElementById('rescanNextBtn')?.addEventListener('click', async () => {
+  if (rescanStep < 3) {
+    rescanStep++;
+    updateRescanModalUI();
+  } else {
+    document.getElementById('rescanModalOverlay')?.classList.remove('show');
+    showToast('Iniciando re-escaneo profundo de 30 min por todas las unidades...');
+    await fetch('/api/scan/reset-and-scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirmedByUserClick: true })
+    });
+    pollScanStatus();
+  }
+});
 
 /* ─── Arranque ───────────────────────────────────────────────────────────────── */
 window.addEventListener('DOMContentLoaded', () => switchTab('Home'));

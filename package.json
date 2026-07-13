@@ -1,13 +1,15 @@
 {
   "name": "local-agent-monitor",
-  "version": "5.5.0",
-  "description": "Navi Cleaner v5.5 — Apple Suite Desktop Edition",
+  "version": "6.0.0",
+  "description": "Navi Cleaner v6.0 — Apple Suite Desktop Edition",
   "main": "server.js",
   "bin": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "build": "pkg . --output \"Navi Cleaner.exe\" --targets node18-win-x64"
+    "build:win": "pkg . --output \"Navi Cleaner-win.exe\" --targets node18-win-x64",
+    "build:mac": "pkg . --output \"Navi Cleaner-mac\" --targets node18-macos-x64",
+    "build": "npm run build:win && npm run build:mac"
   },
   "pkg": {
     "assets": [
@@ -16,7 +18,8 @@
       "node_modules/better-sqlite3/build/Release/*.node"
     ],
     "targets": [
-      "node18-win-x64"
+      "node18-win-x64",
+      "node18-macos-x64"
     ]
   },
   "keywords": [

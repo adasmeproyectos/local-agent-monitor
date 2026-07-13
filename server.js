@@ -7,8 +7,8 @@ const fs       = require('fs');
 const fsp      = require('fs').promises;
 const { spawn, exec } = require('child_process');
 
-const { getFiles, getStats, reclassifyFile, closeDb, getDb, DB_PATH } = require('./modules/db');
-const { runScan, onProgress, organizeAcademicFiles } = require('./modules/crawler');
+const { getFiles, getStats, reclassifyFile, closeDb, getDb, resetDeltaCache, DB_PATH } = require('./modules/db');
+const { runScan, onProgress, organizeAcademicFiles, discoverStorageDrives } = require('./modules/crawler');
 const { getProcessSnapshot }     = require('./modules/process-monitor');
 const { classify }               = require('./modules/classifier');
 const {
@@ -111,6 +111,76 @@ app.post('/api/scan', (req, res) => {
 
 app.get('/api/scan/status', (req, res) => res.json({ ok: true, scanState }));
 
+// CRITICAL FAIL-SAFE HUMAN-CONFIRMATION MATRIX FOR FULL RESCAN
+app.post('/api/scan/reset-and-scan', async (req, res) => {
+  if (!req.body || !req.body.confirmedByUserClick) {
+    return res.status(403).json({ ok: false, error: 'FAIL-SAFE SAFETY RESTRICTION: Reset and full rescan requires explicit human confirmation click.' });
+  }
+  if (scanState.running) return res.json({ ok: false, message: 'Scan already in progress', scanState });
+
+  resetDeltaCache();
+  const dirs = await discoverStorageDrives();
+  res.json({ ok: true, message: 'Delta cache reset. Multi-drive deep crawl initiated.', dirs, scanState, isInitialScan: true });
+  runScan(dirs, { isInitialScan: true }).catch(err => { console.error('[Crawler error]', err); scanState.running = false; });
+});
+
+// SMART TEMPORAL CLUSTERING & BURST DETECTION
+app.get('/api/bursts', (req, res) => {
+  try {
+    const allFiles = getFiles({ limit: 1500 });
+    const dateBuckets = {};
+    for (const f of allFiles) {
+      if (!f.mtime) continue;
+      const dateKey = String(f.mtime).slice(0, 10);
+      if (!dateBuckets[dateKey]) dateBuckets[dateKey] = [];
+      dateBuckets[dateKey].push(f);
+    }
+    const bursts = [];
+    Object.keys(dateBuckets).forEach(dateStr => {
+      const group = dateBuckets[dateStr];
+      if (group.length >= 3) {
+        bursts.push({
+          date: dateStr,
+          count: group.length,
+          sampleFiles: group.slice(0, 8),
+          allFilePaths: group.map(g => g.path),
+          totalSize: group.reduce((acc, g) => acc + (g.size || 0), 0)
+        });
+      }
+    });
+    bursts.sort((a, b) => b.count - a.count);
+    res.json({ ok: true, bursts: bursts.slice(0, 15) });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.post('/api/bursts/group', async (req, res) => {
+  if (!req.body || !req.body.confirmedByUserClick) {
+    return res.status(403).json({ ok: false, error: 'FAIL-SAFE SAFETY RESTRICTION: Autonomous file grouping strictly forbidden without explicit human confirmation.' });
+  }
+  try {
+    const { folderName, filePaths } = req.body;
+    if (!folderName || !Array.isArray(filePaths) || filePaths.length === 0) {
+      return res.status(400).json({ ok: false, error: 'folderName and filePaths required' });
+    }
+    const homeDir = require('os').homedir();
+    const destDir = path.join(homeDir, 'Downloads', folderName.replace(/[<>:"/\\|?*]/g, '').trim() || 'Ráfaga Agrupada');
+    await fsp.mkdir(destDir, { recursive: true });
+    let moved = 0;
+    for (const fp of filePaths) {
+      try {
+        const destPath = path.join(destDir, path.basename(fp));
+        await fsp.rename(fp, destPath);
+        moved++;
+      } catch { /* skip missing or protected */ }
+    }
+    res.json({ ok: true, moved, destDir });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 app.get('/api/files', (req, res) => {
   try {
     const cluster  = req.query.cluster || 'all';
@@ -204,6 +274,9 @@ app.post('/api/files/explorer', (req, res) => {
 
 // ─── Purge File ───────────────────────────────────────────────────────────────
 app.delete('/api/files', async (req, res) => {
+  if (!req.body || !req.body.confirmedByUserClick) {
+    return res.status(403).json({ ok: false, error: 'FAIL-SAFE SAFETY RESTRICTION: File deletion requires explicit human confirmation click.' });
+  }
   const { filePath } = req.body;
   if (!filePath) return res.status(400).json({ ok: false, error: 'filePath required' });
   const blocked = ['\\windows\\', '\\program files\\', '\\programdata\\system'];
@@ -335,4 +408,7 @@ _server = app.listen(PORT, '127.0.0.1', async () => {
   console.log(`║   Database→ ${DB_PATH}  ║`);
   console.log('╚══════════════════════════════════════════════════╝');
   console.log('');
+  try {
+    exec(`start ${url}`);
+  } catch { /* ignore */ }
 });
