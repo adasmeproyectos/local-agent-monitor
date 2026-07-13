@@ -104,6 +104,21 @@ function showToast(msg, type = 'info', duration = 3800) {
   }
 }
 
+/* ─── Global Button Locking Matrix ───────────────────────────────────────────── */
+function setButtonLoading(btn, isLoading, loadingText = '⏳ Cargando...') {
+  if (!btn) return;
+  if (isLoading) {
+    if (!btn._origText) btn._origText = btn.innerHTML;
+    btn.disabled = true;
+    btn.classList.add('btn-loading');
+    if (loadingText) btn.innerHTML = loadingText;
+  } else {
+    btn.disabled = false;
+    btn.classList.remove('btn-loading');
+    if (btn._origText) btn.innerHTML = btn._origText;
+  }
+}
+
 /* ════════════════════════════════════════════════════════════════════════════════
    0. PANEL PRINCIPAL (DASHBOARD)
    ════════════════════════════════════════════════════════════════════════════════ */
@@ -291,6 +306,11 @@ async function loadStats() {
 
     const homeFilesText = document.getElementById('homeFilesText');
     if (homeFilesText) homeFilesText.textContent = `${(res.totalFiles||0).toLocaleString()} Archivos`;
+    const lastScanEl = document.getElementById('lastScanLabel');
+    if (lastScanEl && res.totalFiles > 0) {
+      const now = new Date();
+      lastScanEl.textContent = `✅ Sistema Sincronizado (${now.toLocaleTimeString()})`;
+    }
 
     // Dynamic AI-Generated Semantic Cluster Filters in Spanish
     window.__cachedSubTagCounts = res.subTagCounts || [];
@@ -529,16 +549,33 @@ document.querySelectorAll('.subtag-btn').forEach(btn => {
 
 document.getElementById('btnScan').addEventListener('click', handleScanRequest);
 
+function unlockAllScanButtons() {
+  const ids = ['homeBtnScanAll', 'btnScan', 'btnScanApps', 'btnRefreshCaches', 'btnRefreshProcesses', 'btnRescanHeader'];
+  ids.forEach(id => setButtonLoading(document.getElementById(id), false));
+}
+
+function lockAllScanButtons() {
+  const ids = ['homeBtnScanAll', 'btnScan', 'btnScanApps', 'btnRefreshCaches', 'btnRefreshProcesses', 'btnRescanHeader'];
+  ids.forEach(id => setButtonLoading(document.getElementById(id), true, '⏳ Escaneando...'));
+}
+
 function pollScanStatus() {
   if (scanPollTimer) clearInterval(scanPollTimer);
   const progressWrap = document.getElementById('scanProgressWrap');
   if (progressWrap) progressWrap.style.display = 'block';
+  lockAllScanButtons();
 
   scanPollTimer = setInterval(async () => {
     const res = await fetch('/api/scan/status').then(r => r.json());
     if (!res.ok || !res.scanState.running) {
       clearInterval(scanPollTimer);
       if (progressWrap) progressWrap.style.display = 'none';
+      unlockAllScanButtons();
+      const lastScanEl = document.getElementById('lastScanLabel');
+      if (lastScanEl) {
+        const now = new Date();
+        lastScanEl.textContent = `✅ Sistema Sincronizado (${now.toLocaleTimeString()})`;
+      }
       loadStats();
       loadFiles();
       showToast('Escaneo completado con éxito');
@@ -642,7 +679,12 @@ function renderAppsTable() {
 }
 
 const btnScanApps = document.getElementById('btnScanApps');
-if (btnScanApps) btnScanApps.addEventListener('click', () => { showToast('Consultando Registro de Windows...'); loadApplications(); });
+if (btnScanApps) btnScanApps.addEventListener('click', async () => {
+  setButtonLoading(btnScanApps, true, '⏳ Consultando...');
+  showToast('Consultando Registro de Windows...');
+  await loadApplications();
+  setButtonLoading(btnScanApps, false);
+});
 
 function openAppModal(name, encCmd, encPath, isForcePurge, isLauncherApp = false) {
   activeAppTarget = {
@@ -730,7 +772,11 @@ async function purgeSingleCache(cacheId) {
 }
 
 const btnRefreshCaches = document.getElementById('btnRefreshCaches');
-if (btnRefreshCaches) btnRefreshCaches.addEventListener('click', () => loadLauncherCaches());
+if (btnRefreshCaches) btnRefreshCaches.addEventListener('click', async () => {
+  setButtonLoading(btnRefreshCaches, true, '⏳ Actualizando...');
+  await loadLauncherCaches();
+  setButtonLoading(btnRefreshCaches, false);
+});
 
 const btnPurgeAllCaches = document.getElementById('btnPurgeAllCaches');
 if (btnPurgeAllCaches) {
@@ -746,12 +792,13 @@ if (btnPurgeAllCaches) {
    4. SEGURIDAD DE PROCESOS
    ════════════════════════════════════════════════════════════════════════════════ */
 async function loadProcesses() {
+  const btn = document.getElementById('btnRefreshProcesses');
+  setButtonLoading(btn, true, '⏳ Actualizando...');
   try {
     const res = await fetch('/api/processes').then(r => r.json());
     if (!res.ok) return;
     renderProcessesTable(res.processes || []);
 
-    // API returns { ok, processes, summary } — summary has keys: critical, suspicious, clean
     const s = res.summary || {};
     const bc  = document.getElementById('badgeCriticalCount');
     const bs  = document.getElementById('badgeSuspiciousCount');
@@ -759,7 +806,17 @@ async function loadProcesses() {
     if (bc)  bc.textContent  = s.critical   ?? 0;
     if (bs)  bs.textContent  = s.suspicious ?? 0;
     if (bcl) bcl.textContent = s.clean      ?? 0;
-  } catch { showToast('Error al consultar procesos del sistema'); }
+
+    const lastScanEl = document.getElementById('lastScanLabel');
+    if (lastScanEl) {
+      const now = new Date();
+      lastScanEl.textContent = `✅ Sistema Sincronizado (${now.toLocaleTimeString()})`;
+    }
+  } catch {
+    showToast('Error al consultar procesos del sistema');
+  } finally {
+    setButtonLoading(btn, false);
+  }
 }
 
 function renderProcessesTable(procs) {

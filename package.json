@@ -1,7 +1,7 @@
 {
   "name": "local-agent-monitor",
-  "version": "6.0.5",
-  "description": "Navi Cleaner v6.0.5 — Rebuilt better-sqlite3 native addon for Node18 target compatibility",
+  "version": "6.0.6",
+  "description": "Navi Cleaner v6.0.6 — UI State Locking, Label Bugfix & Total Cache Purge",
   "main": "server.js",
   "bin": "server.js",
   "scripts": {
