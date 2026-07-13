@@ -501,7 +501,9 @@ _server = app.listen(PORT, '127.0.0.1', async () => {
   console.log('╚══════════════════════════════════════════════════╝');
   console.log('');
   ensureDesktopShortcut();
-  try {
-    launchNativeAppWindow(url);
-  } catch { /* ignore */ }
+  if (!process.argv.includes('--no-window') && !process.env.NO_WINDOW) {
+    try {
+      launchNativeAppWindow(url);
+    } catch { /* ignore */ }
+  }
 });

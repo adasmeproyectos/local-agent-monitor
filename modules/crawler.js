@@ -6,10 +6,26 @@ const { extractMetadata } = require('./extractor');
 const { classify }        = require('./classifier');
 const { upsertFile, getFileByPath, startSession, completeSession } = require('./db');
 
-const SKIP_DIRS = new Set([
-  'node_modules', '.git', '$Recycle.Bin', 'System Volume Information',
-  'Windows', 'Program Files', 'Program Files (x86)', 'ProgramData', 'Recovery', 'PerfLogs',
+const SKIP_NAMES = new Set([
+  'node_modules', '.git', '$recycle.bin', 'system volume information',
+  'windows', 'program files', 'program files (x86)', 'programdata', 'recovery', 'perflogs',
+  'windowsapps', 'packages', 'appdata', 'msocache', 'config.msi'
 ]);
+
+function shouldSkipDir(name, fullPath) {
+  if (!name || name.startsWith('.')) return true;
+  const lowerName = name.toLowerCase();
+  if (SKIP_NAMES.has(lowerName)) return true;
+  const lowerPath = (fullPath || '').toLowerCase();
+  if (lowerPath.includes('appdata\\local\\packages') ||
+      lowerPath.includes('appdata/local/packages') ||
+      lowerPath.includes('$recycle.bin') ||
+      lowerPath.includes('system volume information') ||
+      lowerPath.includes('windowsapps')) {
+    return true;
+  }
+  return false;
+}
 
 // ─── Progress Emitter ─────────────────────────────────────────────────────────
 let _progressCallback = null;
@@ -32,7 +48,7 @@ async function* walkDir(dirPath, depth = 0, maxDepth = 12) {
     const fullPath = path.join(dirPath, entry.name);
 
     if (entry.isDirectory()) {
-      if (SKIP_DIRS.has(entry.name) || entry.name.startsWith('.')) continue;
+      if (shouldSkipDir(entry.name, fullPath)) continue;
       yield* walkDir(fullPath, depth + 1, maxDepth);
     } else if (entry.isFile()) {
       yield fullPath;

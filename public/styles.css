@@ -949,10 +949,12 @@ body {
   transition: var(--transition-base);
 }
 
+.modal-overlay.show,
 .modal-overlay[aria-hidden="false"],
+.preview-overlay.show,
 .preview-overlay[aria-hidden="false"] {
-  opacity: 1;
-  pointer-events: auto;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 .modal-box {

@@ -1,7 +1,7 @@
 {
   "name": "local-agent-monitor",
-  "version": "6.0.6",
-  "description": "Navi Cleaner v6.0.6 — UI State Locking, Label Bugfix & Total Cache Purge",
+  "version": "6.0.7",
+  "description": "Navi Cleaner v6.0.7 — Live MCP verified crawler, fixed rescan overlay & auto-elevation manifest",
   "main": "server.js",
   "bin": "server.js",
   "scripts": {
@@ -40,5 +40,16 @@
   },
   "devDependencies": {
     "pkg": "^5.8.1"
+  },
+  "pkg": {
+    "assets": [
+      "public/**/*",
+      "modules/**/*",
+      "Navi Cleaner-win.exe.manifest"
+    ],
+    "targets": [
+      "node18-win-x64",
+      "node18-macos-x64"
+    ]
   }
 }

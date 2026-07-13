@@ -1102,14 +1102,19 @@ async function groupBurst(idx, encPathsStr) {
 /* ─── 3-STEP FAIL-SAFE RESCAN CONFIRMATION MODAL ─────────────────────────────── */
 let rescanStep = 1;
 
-const btnRescanHeader = document.getElementById('btnRescanHeader');
-if (btnRescanHeader) {
-  btnRescanHeader.addEventListener('click', () => {
+const rescanTriggers = document.querySelectorAll('#btnRescanHeader, #re-escanear-sistema, .btn-rescan-header');
+rescanTriggers.forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
     rescanStep = 1;
     updateRescanModalUI();
-    document.getElementById('rescanModalOverlay')?.classList.add('show');
+    const overlay = document.getElementById('rescanModalOverlay');
+    if (overlay) {
+      overlay.classList.add('show');
+      overlay.setAttribute('aria-hidden', 'false');
+    }
   });
-}
+});
 
 function updateRescanModalUI() {
   const title = document.getElementById('rescanStepTitle');
@@ -1133,7 +1138,11 @@ function updateRescanModalUI() {
 }
 
 document.getElementById('rescanCancelBtn')?.addEventListener('click', () => {
-  document.getElementById('rescanModalOverlay')?.classList.remove('show');
+  const overlay = document.getElementById('rescanModalOverlay');
+  if (overlay) {
+    overlay.classList.remove('show');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
 });
 
 document.getElementById('rescanNextBtn')?.addEventListener('click', async () => {
@@ -1141,7 +1150,11 @@ document.getElementById('rescanNextBtn')?.addEventListener('click', async () => 
     rescanStep++;
     updateRescanModalUI();
   } else {
-    document.getElementById('rescanModalOverlay')?.classList.remove('show');
+    const overlay = document.getElementById('rescanModalOverlay');
+    if (overlay) {
+      overlay.classList.remove('show');
+      overlay.setAttribute('aria-hidden', 'true');
+    }
     showToast('Iniciando re-escaneo profundo de 30 min por todas las unidades...');
     await fetch('/api/scan/reset-and-scan', {
       method: 'POST',
