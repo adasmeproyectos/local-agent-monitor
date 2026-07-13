@@ -79,19 +79,42 @@ Object.keys(tabBtns).forEach(k => {
 });
 
 /* ─── Toast ──────────────────────────────────────────────────────────────────── */
-function showToast(msg, duration = 3200) {
+function showToast(msg, type = 'info', duration = 3800) {
+  if (typeof type === 'number') {
+    duration = type;
+    type = 'info';
+  }
+  const container = document.getElementById('toastContainer');
+  if (container) {
+    const item = document.createElement('div');
+    item.className = `toast-item toast-item--${type}`;
+    item.textContent = msg;
+    container.appendChild(item);
+    requestAnimationFrame(() => item.classList.add('show'));
+    setTimeout(() => {
+      item.classList.remove('show');
+      setTimeout(() => item.remove(), 320);
+    }, duration);
+  }
   const toast = document.getElementById('toast');
-  toast.textContent = msg;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), duration);
+  if (toast) {
+    toast.textContent = msg;
+    toast.className = `toast show toast-item--${type}`;
+    setTimeout(() => toast.classList.remove('show'), duration);
+  }
 }
 
 /* ════════════════════════════════════════════════════════════════════════════════
    0. PANEL PRINCIPAL (DASHBOARD)
    ════════════════════════════════════════════════════════════════════════════════ */
 async function loadDashboardHome() {
-  await Promise.all([loadStats(), loadApplications(true), loadLauncherCaches(true), loadFiles(true)]);
-  renderDashboardSuggestions();
+  try {
+    await Promise.all([loadStats(true), loadApplications(true), loadLauncherCaches(true), loadFiles(true)]);
+    renderDashboardSuggestions();
+    showToast('✅ ¡Datos sincronizados con éxito!', 'success', 3200);
+  } catch (err) {
+    showToast('❌ Error interno del servidor (Status 500). No se pudo leer la base de datos local.', 'error', 5000);
+  }
 }
 
 /* Anti-falso-positivo helpers */
@@ -223,15 +246,19 @@ async function executeScan(isInitialScan = false) {
   const overlay = document.getElementById('initialScanModalOverlay');
   if (overlay) overlay.classList.remove('show');
   window.__hasScannedDeep = true;
-  const msg = isInitialScan
-    ? 'Iniciando Escaneo Profundo Raíz C:\\ (Hasta 30 min)...'
-    : 'Iniciando escaneo rápido / delta en segundo plano...';
-  showToast(msg, 4000);
-  await fetch('/api/scan', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ isInitialScan })
-  });
+  showToast('⏳ Iniciando escaneo profundo del sistema... Esperando respuesta local.', 'info', 4500);
+  try {
+    const res = await fetch('/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isInitialScan })
+    });
+    if (res.status === 500) {
+      showToast('❌ Error interno del servidor (Status 500). No se pudo leer la base de datos local.', 'error', 5000);
+    }
+  } catch (err) {
+    showToast('❌ Error interno del servidor (Status 500). No se pudo leer la base de datos local.', 'error', 5000);
+  }
   await Promise.all([loadApplications(), loadLauncherCaches(), loadFiles()]);
   pollScanStatus();
 }
@@ -338,12 +365,20 @@ function updateDynamicSubTagToolbar(clusterName) {
 async function loadFiles(isSilent = false) {
   try {
     const url = `/api/files?cluster=${encodeURIComponent(currentCluster)}&sub_tag=${encodeURIComponent(currentSubTag)}&limit=300`;
-    const res = await fetch(url).then(r => r.json());
+    const r = await fetch(url);
+    if (r.status === 500) {
+      if (!isSilent) showToast('❌ Error interno del servidor (Status 500). No se pudo leer la base de datos local.', 'error', 5000);
+      return;
+    }
+    const res = await r.json();
     if (!res.ok) return;
     rawFilesList = res.files || [];
-    if (!isSilent) renderFilesTable();
+    if (!isSilent) {
+      renderFilesTable();
+      showToast('✅ ¡Datos sincronizados con éxito!', 'success', 3000);
+    }
   } catch (err) {
-    if (!isSilent) showToast('Error al cargar índice de archivos');
+    if (!isSilent) showToast('❌ Error interno del servidor (Status 500). No se pudo leer la base de datos local.', 'error', 5000);
   }
 }
 

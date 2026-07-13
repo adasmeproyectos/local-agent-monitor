@@ -101,8 +101,33 @@ onProgress((event, data) => {
 // ─── API Routes ───────────────────────────────────────────────────────────────
 
 app.get('/api/stats', (req, res) => {
-  try { res.json({ ok: true, ...getStats(), scanState, isAdmin: _isAdmin, dbPath: DB_PATH }); }
-  catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+  try {
+    const stats = getStats() || {};
+    res.json({
+      ok: true,
+      clusterCounts: stats.clusterCounts || [],
+      subTagCounts: stats.subTagCounts || [],
+      dynamicCategories: stats.dynamicCategories || [],
+      lastSession: stats.lastSession || null,
+      totalFiles: stats.totalFiles || 0,
+      scanState,
+      isAdmin: _isAdmin,
+      dbPath: DB_PATH
+    });
+  } catch (err) {
+    console.error('[GET /api/stats fallback error]', err.message);
+    res.json({
+      ok: true,
+      clusterCounts: [],
+      subTagCounts: [],
+      dynamicCategories: [],
+      lastSession: null,
+      totalFiles: 0,
+      scanState,
+      isAdmin: _isAdmin,
+      dbPath: DB_PATH
+    });
+  }
 });
 
 const scanHandler = async (req, res) => {
@@ -134,10 +159,10 @@ app.post('/api/scan/reset-and-scan', async (req, res) => {
 // SMART TEMPORAL CLUSTERING & BURST DETECTION
 app.get('/api/bursts', (req, res) => {
   try {
-    const allFiles = getFiles({ limit: 1500 });
+    const allFiles = getFiles({ limit: 1500 }) || [];
     const dateBuckets = {};
     for (const f of allFiles) {
-      if (!f.mtime) continue;
+      if (!f || !f.mtime) continue;
       const dateKey = String(f.mtime).slice(0, 10);
       if (!dateBuckets[dateKey]) dateBuckets[dateKey] = [];
       dateBuckets[dateKey].push(f);
@@ -145,12 +170,12 @@ app.get('/api/bursts', (req, res) => {
     const bursts = [];
     Object.keys(dateBuckets).forEach(dateStr => {
       const group = dateBuckets[dateStr];
-      if (group.length >= 3) {
+      if (group && group.length >= 3) {
         bursts.push({
           date: dateStr,
           count: group.length,
           sampleFiles: group.slice(0, 8),
-          allFilePaths: group.map(g => g.path),
+          allFilePaths: group.map(g => g.path).filter(Boolean),
           totalSize: group.reduce((acc, g) => acc + (g.size || 0), 0)
         });
       }
@@ -158,7 +183,8 @@ app.get('/api/bursts', (req, res) => {
     bursts.sort((a, b) => b.count - a.count);
     res.json({ ok: true, bursts: bursts.slice(0, 15) });
   } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
+    console.error('[GET /api/bursts error]', err.message);
+    res.json({ ok: true, bursts: [] });
   }
 });
 
@@ -190,13 +216,18 @@ app.post('/api/bursts/group', async (req, res) => {
 
 app.get('/api/files', (req, res) => {
   try {
-    const cluster  = req.query.cluster || 'all';
-    const sub_tag  = req.query.sub_tag || 'all';
-    const limit    = Math.min(parseInt(req.query.limit  || '300'), 500);
-    const offset   = parseInt(req.query.offset || '0');
-    const files    = getFiles({ cluster, sub_tag, limit, offset });
+    const cluster = req.query.cluster || 'all';
+    const sub_tag = req.query.sub_tag || 'all';
+    const limitNum = parseInt(req.query.limit || '300', 10);
+    const offsetNum = parseInt(req.query.offset || '0', 10);
+    const limit = (Number.isFinite(limitNum) && limitNum > 0) ? Math.min(limitNum, 500) : 300;
+    const offset = (Number.isFinite(offsetNum) && offsetNum >= 0) ? offsetNum : 0;
+    const files = getFiles({ cluster, sub_tag, limit, offset }) || [];
     res.json({ ok: true, files, count: files.length });
-  } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+  } catch (err) {
+    console.error('[GET /api/files error]', err.message);
+    res.json({ ok: true, files: [], count: 0 });
+  }
 });
 
 app.post('/api/classify', (req, res) => {

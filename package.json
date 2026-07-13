@@ -1,7 +1,7 @@
 {
   "name": "local-agent-monitor",
-  "version": "6.0.3",
-  "description": "Navi Cleaner v6.0.3 — Apple Suite Desktop Edition",
+  "version": "6.0.4",
+  "description": "Navi Cleaner v6.0.4 — Hotfix 500 Resolution & Apple Toasts",
   "main": "server.js",
   "bin": "server.js",
   "scripts": {

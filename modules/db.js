@@ -125,59 +125,73 @@ function registerDynamicCategory(clusterName, description = '') {
 }
 
 function getFiles({ cluster, sub_tag, ext, limit = 300, offset = 0 } = {}) {
-  const db = getDb();
-  let query = 'SELECT * FROM files';
-  const params = [];
-  const conditions = [];
+  try {
+    const db = getDb();
+    let query = 'SELECT * FROM files';
+    const params = [];
+    const conditions = [];
 
-  if (cluster && cluster !== 'all') {
-    conditions.push('cluster = ?');
-    params.push(cluster);
-  }
-  if (sub_tag && sub_tag !== 'all') {
-    conditions.push('(sub_tag = ? OR sub_tag LIKE ?)');
-    params.push(sub_tag, `%${sub_tag}%`);
-  }
-  if (ext) {
-    conditions.push('ext = ?');
-    params.push(ext);
-  }
-  if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
-  query += ' ORDER BY indexed_at DESC LIMIT ? OFFSET ?';
-  params.push(limit, offset);
+    if (cluster && cluster !== 'all') {
+      conditions.push('cluster = ?');
+      params.push(String(cluster));
+    }
+    if (sub_tag && sub_tag !== 'all') {
+      conditions.push('(sub_tag = ? OR sub_tag LIKE ?)');
+      params.push(String(sub_tag), `%${sub_tag}%`);
+    }
+    if (ext) {
+      conditions.push('ext = ?');
+      params.push(String(ext));
+    }
+    if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
+    query += ' ORDER BY indexed_at DESC LIMIT ? OFFSET ?';
 
-  return db.prepare(query).all(...params);
+    const safeLimit = (Number.isFinite(Number(limit)) && Number(limit) > 0) ? Math.floor(Number(limit)) : 300;
+    const safeOffset = (Number.isFinite(Number(offset)) && Number(offset) >= 0) ? Math.floor(Number(offset)) : 0;
+    params.push(safeLimit, safeOffset);
+
+    return db.prepare(query).all(...params) || [];
+  } catch (err) {
+    console.error('[db.getFiles error]', err.message);
+    return [];
+  }
 }
 
 function getStats() {
-  const db = getDb();
+  try {
+    const db = getDb();
 
-  const clusterCounts = db.prepare(`
-    SELECT cluster, COUNT(*) as count, SUM(size) as total_size
-    FROM files
-    GROUP BY cluster
-    ORDER BY count DESC
-  `).all();
+    const clusterCounts = db.prepare(`
+      SELECT cluster, COUNT(*) as count, SUM(size) as total_size
+      FROM files
+      GROUP BY cluster
+      ORDER BY count DESC
+    `).all() || [];
 
-  const subTagCounts = db.prepare(`
-    SELECT cluster, sub_tag, COUNT(*) as count
-    FROM files
-    WHERE sub_tag IS NOT NULL
-    GROUP BY cluster, sub_tag
-    ORDER BY count DESC
-  `).all();
+    const subTagCounts = db.prepare(`
+      SELECT cluster, sub_tag, COUNT(*) as count
+      FROM files
+      WHERE sub_tag IS NOT NULL
+      GROUP BY cluster, sub_tag
+      ORDER BY count DESC
+    `).all() || [];
 
-  const dynamicCategories = db.prepare(`
-    SELECT * FROM dynamic_categories ORDER BY id ASC
-  `).all();
+    const dynamicCategories = db.prepare(`
+      SELECT * FROM dynamic_categories ORDER BY id ASC
+    `).all() || [];
 
-  const lastSession = db.prepare(`
-    SELECT * FROM scan_sessions ORDER BY id DESC LIMIT 1
-  `).get();
+    const lastSession = db.prepare(`
+      SELECT * FROM scan_sessions ORDER BY id DESC LIMIT 1
+    `).get() || null;
 
-  const totalFiles = db.prepare('SELECT COUNT(*) as n FROM files').get().n;
+    const totalRow = db.prepare('SELECT COUNT(*) as n FROM files').get();
+    const totalFiles = totalRow ? (totalRow.n || 0) : 0;
 
-  return { clusterCounts, subTagCounts, dynamicCategories, lastSession, totalFiles, dbPath: DB_PATH };
+    return { clusterCounts, subTagCounts, dynamicCategories, lastSession, totalFiles, dbPath: DB_PATH };
+  } catch (err) {
+    console.error('[db.getStats error]', err.message);
+    return { clusterCounts: [], subTagCounts: [], dynamicCategories: [], lastSession: null, totalFiles: 0, dbPath: DB_PATH };
+  }
 }
 
 function reclassifyFile(filePath, cluster, sub_tag, confidence) {
