@@ -105,13 +105,16 @@ app.get('/api/stats', (req, res) => {
   catch (err) { res.status(500).json({ ok: false, error: err.message }); }
 });
 
-app.post('/api/scan', (req, res) => {
+const scanHandler = async (req, res) => {
   if (scanState.running) return res.json({ ok: false, message: 'Scan already in progress', scanState });
-  const dirs = (req.body?.dirs && Array.isArray(req.body.dirs)) ? req.body.dirs : DEFAULT_TARGETS;
   const isInitialScan = Boolean(req.body?.isInitialScan);
+  const dirs = (req.body?.dirs && Array.isArray(req.body.dirs)) ? req.body.dirs : await discoverStorageDrives();
   res.json({ ok: true, message: 'Scan started', dirs, scanState, isInitialScan });
   runScan(dirs, { isInitialScan }).catch(err => { console.error('[Crawler error]', err); scanState.running = false; });
-});
+};
+
+app.post('/api/scan', scanHandler);
+app.post('/api/files/scan', scanHandler);
 
 app.get('/api/scan/status', (req, res) => res.json({ ok: true, scanState }));
 
@@ -400,6 +403,60 @@ function gracefulShutdown(reason = 'unknown') {
 process.on('SIGINT',  () => gracefulShutdown('SIGINT (Ctrl+C)'));
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
+// ─── Desktop Shortcut Suite ───────────────────────────────────────────────────
+function ensureDesktopShortcut() {
+  if (process.platform !== 'win32') return;
+  try {
+    const desktopPath = path.join(os.homedir(), 'Desktop');
+    const shortcutPath = path.join(desktopPath, 'Navi Cleaner.lnk');
+    if (fs.existsSync(shortcutPath)) return;
+
+    const targetPath = process.execPath;
+    const vbsScriptPath = path.join(os.tmpdir(), 'create_navi_shortcut.vbs');
+    const vbsContent = [
+      'Set oWS = WScript.CreateObject("WScript.Shell")',
+      `sLinkFile = "${shortcutPath}"`,
+      'Set oLink = oWS.CreateShortcut(sLinkFile)',
+      `oLink.TargetPath = "${targetPath}"`,
+      `oLink.WorkingDirectory = "${path.dirname(targetPath)}"`,
+      'oLink.Description = "Navi Cleaner Suite de Optimización"',
+      'oLink.Save'
+    ].join('\r\n');
+    fs.writeFileSync(vbsScriptPath, vbsContent, 'utf8');
+    exec(`cscript //nologo "${vbsScriptPath}"`, () => {
+      try { fs.unlinkSync(vbsScriptPath); } catch {}
+    });
+    console.log('  ✨ Created standalone desktop shortcut: Navi Cleaner.lnk');
+  } catch (err) {
+    console.error('[Shortcut creation error]', err.message);
+  }
+}
+
+// ─── Chromium App Wrapper (Native Window Mode) ────────────────────────────────
+function launchNativeAppWindow(url) {
+  if (process.platform === 'win32') {
+    const chromePaths = [
+      path.join(process.env['ProgramFiles'] || 'C:\\Program Files', 'Google\\Chrome\\Application\\chrome.exe'),
+      path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Google\\Chrome\\Application\\chrome.exe'),
+      path.join(process.env['LocalAppData'] || os.homedir(), 'Google\\Chrome\\Application\\chrome.exe'),
+      path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Microsoft\\Edge\\Application\\msedge.exe'),
+      path.join(process.env['ProgramFiles'] || 'C:\\Program Files', 'Microsoft\\Edge\\Application\\msedge.exe')
+    ];
+    const appCmd = chromePaths.find(p => fs.existsSync(p));
+    if (appCmd) {
+      spawn(appCmd, [`--app=${url}`], { detached: true, stdio: 'ignore' }).unref();
+      return;
+    }
+  } else if (process.platform === 'darwin') {
+    const macChrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+    if (fs.existsSync(macChrome)) {
+      spawn(macChrome, [`--app=${url}`], { detached: true, stdio: 'ignore' }).unref();
+      return;
+    }
+  }
+  exec(`start ${url}`);
+}
+
 // ─── Start ────────────────────────────────────────────────────────────────────
 _server = app.listen(PORT, '127.0.0.1', async () => {
   const url = `http://localhost:${PORT}`;
@@ -412,7 +469,8 @@ _server = app.listen(PORT, '127.0.0.1', async () => {
   console.log(`║   Database→ ${DB_PATH}  ║`);
   console.log('╚══════════════════════════════════════════════════╝');
   console.log('');
+  ensureDesktopShortcut();
   try {
-    exec(`start ${url}`);
+    launchNativeAppWindow(url);
   } catch { /* ignore */ }
 });
